@@ -622,13 +622,24 @@ const LIGHT_BUILDERS = {
       disc.position.y = H - 0.0065; g.add(disc);
       addSpot(g, it, 0, H - 0.02, 0, THREE.MathUtils.degToRad(60), lmOf(LIGHT_BUILDERS.downlight, it), 1, 0, 0, 0, 3.2, 0);   // 120° 확산 배광, 도달 3.2 m
     } },
-  ledpanel: { label: 'LED 평판등', light: true, watt: 40, parts: { frame: 'frame.white' }, def: { w: 0.6, d: 0.6, h: 0.03 },
+  // 거실등: 우리조명 매입형/고정형 LED등기구 60W — 정격광속 5,400 lm(90 lm/W), 6500K, 375 × 705 × 50 mm, KS C 7653, CRI 80
+  ledpanel: { label: 'LED 거실등 60W (375×705 평판)', light: true, watt: 60, lmw: 90, parts: { frame: 'frame.white' }, def: { w: 0.705, d: 0.375, h: 0.05 },
     build(g, it, M) {
-      bx(g, it.w + 0.02, it.h, it.d + 0.02, M('frame'), 0, H - it.h, 0, { cast: false });
-      const m = new THREE.Mesh(boxGeo(it.w, 0.004, it.d), glowMat(it)); m.position.y = H - it.h - 0.002; g.add(m);
-      const W = lmOf(LIGHT_BUILDERS.ledpanel, it);
-      addRect(g, it, 0, H - it.h - 0.01, 0, it.w, it.d, W, 0.25);                          // 면광원 25% — 유광 면에 패널 형태가 비친다
-      addSpot(g, it, 0, H - it.h - 0.02, 0, THREE.MathUtils.degToRad(70), W, 0.75, 0, 0, 0, 8, 3);   // 넓은 스포트 75% — 그림자 우선순위 높음(방등)
+      bx(g, it.w, it.h, it.d, M('frame'), 0, H - it.h, 0, { cast: false });                  // 흰 알루미늄 프레임(고정형 50 mm)
+      const m = new THREE.Mesh(boxGeo(it.w - 0.03, 0.004, it.d - 0.03), glowMat(it)); m.position.y = H - it.h - 0.002; g.add(m);   // 유백 확산판
+      const L = lmOf(LIGHT_BUILDERS.ledpanel, it);
+      addRect(g, it, 0, H - it.h - 0.01, 0, it.w - 0.03, it.d - 0.03, L, 0.25);              // 면광원 25% — 유광 면에 패널 형태가 비친다
+      addSpot(g, it, 0, H - it.h - 0.02, 0, THREE.MathUtils.degToRad(70), L, 0.75, 0, 0, 0, 8, 3);   // 넓은 스포트 75% — 그림자(벽 차단)
+    } },
+  // 방등: 우리엔터프라이즈 LED 등기구(고정형) 60W — Ø500 × 65 mm, 6500K, CRI 80, KS C 7653. 광속 표기 없음 → 같은 계열 90 lm/W 로 5,400 lm 가정
+  roundlight: { label: 'LED 방등 60W (Ø500 원형)', light: true, watt: 60, lmw: 90, parts: { frame: 'frame.white' }, def: { w: 0.5, d: 0.5, h: 0.065 },
+    build(g, it, M) {
+      const r = it.w / 2;
+      cyl(g, r, it.h, M('frame'), 0, H - it.h, 0, { seg: 48 });                              // 흰 원형 본체 65 mm
+      const disc = new THREE.Mesh(new THREE.CylinderGeometry(r - 0.015, r - 0.015, 0.004, 48), glowMat(it)); disc.position.y = H - it.h - 0.002; g.add(disc);   // 유백 확산판
+      const L = lmOf(LIGHT_BUILDERS.roundlight, it), s = r * 1.77;                            // 원 면적과 같은 정사각 면광원
+      addRect(g, it, 0, H - it.h - 0.01, 0, s, s, L, 0.25);
+      addSpot(g, it, 0, H - it.h - 0.02, 0, THREE.MathUtils.degToRad(70), L, 0.75, 0, 0, 0, 8, 3);
     } },
   pendant: { label: '식탁등(돔)', light: true, watt: 8, parts: { shade: 'shade' }, def: { w: 0.35, d: 0.35, h: 0.9 },
     build(g, it, M) {
