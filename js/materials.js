@@ -46,6 +46,7 @@ export const PAINTS = {
   'shelf':          { label: '책장(모듈)',      group: '가구', color: '#f4f4f4', finish: 'plain', rough: 0.5 },
   'chair':          { label: '의자',            group: '가구', color: '#2e2e2e', finish: 'fabric' },
   'shade':          { label: '조명 갓·바디',    group: '조명', color: '#2b2b2b', finish: 'plain', rough: 0.5 },
+  'aircon':         { label: '천장형 에어컨',   group: '가전', color: '#e3e4e2', finish: 'satin' },   // 천장(#f4f4f2)과 구분되는 연회색 반광 패널
 };
 
 export const DEFAULT_PAINTS = JSON.parse(JSON.stringify(PAINTS));

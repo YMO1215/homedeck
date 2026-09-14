@@ -555,9 +555,10 @@ export const BUILDERS = {
     } },
   box: { label: '박스(치수 입력)', parts: { body: 'wardrobe' }, def: { w: 0.6, d: 0.6, h: 0.6 },
     build(g, it, M) { bx(g, it.w, it.h, it.d, M('body'), 0, 0, 0); } },
-  cassette: { label: '천장형 에어컨', parts: { panel: 'frame.white' }, def: { w: 0.84, d: 0.84, h: 0.03 }, ceiling: true,
+  cassette: { label: '천장형 에어컨', parts: { panel: 'aircon' }, def: { w: 0.84, d: 0.84, h: 0.03 }, ceiling: true,
     build(g, it, M) {                        // 천장에 붙는 패널. 폭·깊이로 크기 조절(1방향 기종은 깊이를 줄이면 된다)
-      bx(g, it.w, it.h, it.d, M('panel'), 0, H - it.h, 0, { cast: false });
+      bx(g, it.w, it.h, it.d, M('panel'), 0, H - it.h, 0, { cast: false });                    // 연회색 반광 패널(천장과 구분)
+      bx(g, it.w - 0.03, 0.004, it.d - 0.03, SPECIAL.dark, 0, H - it.h - 0.002, 0, { cast: false }).material = new THREE.MeshStandardMaterial({ color: '#cfd0ce', roughness: 0.6 });   // 안쪽 단차(살짝 어두운 면)
       const iw = it.w * 0.72, id = it.d * 0.72, s = 0.06;
       const slim = Math.min(it.w, it.d) < 0.5;   // 슬림(1방향) 기종: 긴 축을 따라 토출구 하나
       const vents = slim ? (it.w >= it.d ? [[0, it.d * 0.25, iw, s]] : [[it.w * 0.25, 0, s, id]])
