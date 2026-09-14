@@ -2,11 +2,11 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { H, S, mx, mz, CENTER, BOUNDS, VIEWS, DEFAULT_ITEMS, PLAN_VERSION, WALLS } from './plan.js';
+import { H, S, mx, mz, CENTER, BOUNDS, VIEWS, DEFAULT_ITEMS, PLAN_VERSION, WALLS, ROOMS } from './plan.js';
 import { PAINTS, DEFAULT_PAINTS, updatePaint, getMaterial, OPTICS } from './materials.js';
 import { FINISHES } from './textures.js';
 import { SCHEMES } from './schemes.js';
-import { buildWalls, buildFloors, buildDoors, buildFixtures, buildItem, BUILDERS, CATALOG, CATALOG_LIGHTS, KELVIN_OPTIONS, wattOf, lmOf, SHADOW_BUDGET } from './builders.js';
+import { buildWalls, buildFloors, buildDoors, buildFixtures, buildItem, BUILDERS, CATALOG, CATALOG_LIGHTS, KELVIN_OPTIONS, wattOf, lmOf, SHADOW_BUDGET, mergeStatic } from './builders.js';
 
 const SAVE_KEY = 'homedeck.v1';
 const $ = (s) => document.querySelector(s);
@@ -91,6 +91,7 @@ buildWalls(scene);
 buildFloors(scene);
 buildDoors(scene);
 buildFixtures(scene);
+console.log('정적 건축 병합:', mergeStatic(scene), '메시');   // 벽·바닥·천장·문을 재질별 1메시로 (드로우콜 절감)
 
 const itemRoot = new THREE.Group(); scene.add(itemRoot);
 
@@ -532,6 +533,34 @@ function resize() {
     renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); invalidate();
   }
 }
+// ── 성능: 카메라가 있는 방의 면광원만, 가까운 거울만 ─────────────────────────
+// 실내 눈높이(천장 아래)에서만 적용. 탑뷰·외부 시점(천장 위)에서는 전부 켠다.
+const MIRROR_RANGE = 4;
+function pointInPoly(x, z, poly) {
+  let inside = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const xi = mx(poly[i][0]), zi = mz(poly[i][1]), xj = mx(poly[j][0]), zj = mz(poly[j][1]);
+    if ((zi > z) !== (zj > z) && x < (xj - xi) * (z - zi) / (zj - zi) + xi) inside = !inside;
+  }
+  return inside;
+}
+function roomAt(x, z) { const r = ROOMS.find(r => pointInPoly(x, z, r.poly)); return r ? r.id : null; }
+let lastRoom = 'init';
+function updateCulling() {
+  const cx = camera.position.x, cz = camera.position.z, inside = camera.position.y < H;
+  const room = inside ? roomAt(cx, cz) : 'outside';
+  if (room !== lastRoom) {                                   // 면광원: 방이 바뀔 때만 갱신(셰이더 재컴파일 최소화)
+    lastRoom = room;
+    itemRoot.traverse(o => { if (o.isRectAreaLight) { const it = o.parent?.userData?.item; o.visible = room === 'outside' || !it || roomAt(it.x, it.z) === room; } });
+    invalidate();
+  }
+  itemRoot.traverse(o => {                                   // 거울: 가까울 때만 실제 반사
+    if (!o.userData.mirror) return;
+    const p = new THREE.Vector3(); o.getWorldPosition(p);
+    const near = inside && Math.hypot(p.x - cx, p.z - cz) < MIRROR_RANGE;
+    if (o.visible !== near) { o.visible = near; o.userData.fallback.visible = !near; invalidate(); }
+  });
+}
 const clock = new THREE.Clock();
 function tick() {
   const dt = Math.min(clock.getDelta(), 0.05);
@@ -548,7 +577,7 @@ function tick() {
     updateSensors(dt);
     moving = keys.size > 0;
   } else if (!walking) moving = orbit.update();   // 감쇠 중이면 true (걷기 진입 중엔 orbit 이 시선을 건드리지 않게)
-  if (moving || drag || dirty > 0) { renderer.render(scene, camera); if (dirty > 0) dirty--; }
+  if (moving || drag || dirty > 0) { updateCulling(); renderer.render(scene, camera); if (dirty > 0) dirty--; }
   requestAnimationFrame(tick);
 }
 tick();

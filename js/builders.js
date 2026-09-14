@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { RectAreaLightUniformsLib } from 'three/addons/lights/RectAreaLightUniformsLib.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { Reflector } from 'three/addons/objects/Reflector.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { S, H, mx, mz, WALLS, ROOMS, DOORS, FIXTURES, CENTER } from './plan.js';
 RectAreaLightUniformsLib.init();   // 면광원(평판등·라인등)용 LUT — 한 번만
 import { getMaterial, tinted, SPECIAL } from './materials.js';
@@ -44,11 +45,41 @@ export function lathe(parent, profile, mat, x = 0, y = 0, z = 0, seg = 32) {
 }
 // 실제 거울: 환경맵(가짜 스튜디오 조명)이 아니라 씬을 거울 시점에서 다시 그려 비춘다 → 그 방에서 실제로 보이는 등·가구만 비친다.
 // 평면(w × h)이 +z 를 향한다. 중심 (x, y+h/2, z).
+// 가까이(app 의 MIRROR_RANGE)에서만 실제 반사(Reflector)를 그리고, 멀면 회색 유광면(fallback)으로 대체한다.
+const MIRROR_FALLBACK = new THREE.MeshStandardMaterial({ color: '#b9bcc0', metalness: 0.9, roughness: 0.12, envMapIntensity: 1.0 });
 export function mirror(parent, w, h, x, y, z) {
   const m = new Reflector(new THREE.PlaneGeometry(w, h), { clipBias: 0.003, textureWidth: 384, textureHeight: 384, color: 0xdadada });   // 저해상도(부하 절감)
   m.position.set(x, y + h / 2, z);
   m.userData.mirror = true;
-  parent.add(m); return m;
+  const fb = new THREE.Mesh(new THREE.PlaneGeometry(w, h), MIRROR_FALLBACK);
+  fb.position.copy(m.position); fb.userData.mirrorFallback = true; fb.visible = false;
+  m.userData.fallback = fb;
+  parent.add(m, fb); return m;
+}
+// ── 정적 건축 병합 ────────────────────────────────────────────
+// 벽·바닥·천장·문틀·창틀 메시를 재질(=페인트 키)별로 하나의 메시로 합쳐 드로우콜을 줄인다. 색·마감 클릭은 페인트 키 단위라 그대로 동작.
+export function mergeStatic(scene) {
+  const groups = new Map();                  // material → { geos, sample }
+  const meshes = [];
+  scene.traverse(o => { if (o.isMesh && o.geometry && !o.userData.noMerge) meshes.push(o); });
+  scene.updateMatrixWorld(true);
+  for (const m of meshes) {
+    const g = m.geometry.clone().applyMatrix4(m.matrixWorld);
+    if (!g.index) g.setIndex([...Array(g.attributes.position.count).keys()]);
+    for (const k of Object.keys(g.attributes)) if (!['position', 'normal', 'uv'].includes(k)) g.deleteAttribute(k);
+    const e = groups.get(m.material) || { geos: [], sample: m }; e.geos.push(g); groups.set(m.material, e);
+  }
+  for (const m of meshes) { m.parent.remove(m); m.geometry.dispose(); }
+  const empty = []; scene.traverse(o => { if (o.isGroup && o.children.length === 0 && o.parent) empty.push(o); }); for (const o of empty) o.parent.remove(o);
+  let n = 0;
+  for (const [mat, e] of groups) {
+    const merged = new THREE.Mesh(mergeGeometries(e.geos, false), mat);
+    merged.castShadow = e.sample.castShadow; merged.receiveShadow = e.sample.receiveShadow;
+    merged.userData.paint = e.sample.userData.paint; merged.userData.glass = e.sample.userData.glass; merged.userData.merged = true;
+    scene.add(merged); n++;
+    for (const g of e.geos) g.dispose();
+  }
+  return n;
 }
 export function cyl(parent, r, h, mat, x = 0, y = 0, z = 0, o = {}) {
   const m = new THREE.Mesh(new THREE.CylinderGeometry(o.rTop ?? r, r, h, o.seg || 24), mat);
