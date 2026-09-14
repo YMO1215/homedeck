@@ -106,7 +106,7 @@ export const ROOMS = [
 export const DOORS = [
   { hinge: [5200, 4350], end: [5200, 3550], open: 90, kind: 'door', label: '안방 문' },       // 남쪽 힌지, 안방 안쪽(서)으로 90° — 남벽과 6 cm 여유
   { hinge: [5200, 1300], end: [5200, 400], open: -88, kind: 'door', label: '안방욕실 문' },     // 활짝 열림
-  { hinge: [6100, 3300], end: [5300, 3300], open: -88, kind: 'door', label: '공용욕실 문' },    // 활짝 열림
+  { hinge: [5300, 3300], end: [6100, 3300], open: 88, kind: 'door', label: '공용욕실 문' },     // 서쪽 힌지, 욕실 안쪽(북)으로 활짝
   { hinge: [7900, 3300], end: [8700, 3300], open: 90, kind: 'door', label: '작은방 문' },      // 서쪽 힌지, 방 안쪽으로 활짝
   { hinge: [1150, 4500], end: [350, 4500], open: -85, kind: 'door', label: '다용도실 문' },     // 거실 → 세탁실
   { hinge: [6900, 6100], end: [6900, 7000], open: 88, kind: 'door', label: '서재 문' },        // 방 안쪽 북벽에 붙게 열림
