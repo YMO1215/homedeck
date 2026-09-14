@@ -6,7 +6,7 @@ import { H, S, mx, mz, CENTER, BOUNDS, VIEWS, DEFAULT_ITEMS, PLAN_VERSION, WALLS
 import { PAINTS, DEFAULT_PAINTS, updatePaint, getMaterial, OPTICS } from './materials.js';
 import { FINISHES } from './textures.js';
 import { SCHEMES } from './schemes.js';
-import { buildWalls, buildFloors, buildDoors, buildFixtures, buildItem, BUILDERS, CATALOG, CATALOG_LIGHTS, KELVIN_OPTIONS, wattOf } from './builders.js';
+import { buildWalls, buildFloors, buildDoors, buildFixtures, buildItem, BUILDERS, CATALOG, CATALOG_LIGHTS, KELVIN_OPTIONS, wattOf, SHADOW_BUDGET } from './builders.js';
 
 const SAVE_KEY = 'homedeck.v1';
 const $ = (s) => document.querySelector(s);
@@ -58,6 +58,7 @@ const canvas = $('#c');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
 renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFShadowMap;
+renderer.shadowMap.autoUpdate = false;   // 그림자 깊이맵은 씬(가구·조명)이 바뀔 때만 다시 그린다 — 카메라 이동은 공짜
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 
@@ -91,7 +92,15 @@ function mountItem(it) {
   const g = buildItem(it);
   itemRoot.add(g); objs.set(it.id, g);
   applyLamp(g, it);
+  enforceShadowBudget();
   return g;
+}
+// 그림자 켤 스포트 수 제한: GPU 샘플러 한계(보통 16개 텍스처) 때문에 우선순위(방등 3 > 스포트류 2 > 라인 2) 상위 SHADOW_BUDGET 개만 켠다
+function enforceShadowBudget() {
+  const spots = []; itemRoot.traverse(o => { if (o.isSpotLight) spots.push(o); });
+  spots.sort((a, b) => (b.userData.shadowPrio || 0) - (a.userData.shadowPrio || 0));
+  spots.forEach((sp, i) => { sp.castShadow = (sp.userData.shadowPrio || 0) > 0 && i < SHADOW_BUDGET; });
+  renderer.shadowMap.needsUpdate = true;
 }
 // 조명 아이템: 광원 세기 = 기준(base) × 켜짐 × 아이템 배율(pw) × 전역 슬라이더
 function applyLamp(g, it) {
@@ -101,7 +110,7 @@ function applyLamp(g, it) {
 function applyLampAll() { for (const g of objs.values()) applyLamp(g, g.userData.item); }
 function unmountItem(id) {
   const g = objs.get(id); if (!g) return;
-  itemRoot.remove(g); objs.delete(id);
+  itemRoot.remove(g); objs.delete(id); renderer.shadowMap.needsUpdate = true;
   g.traverse(o => { if (o.userData.mirror) o.dispose(); else if (o.isMesh) { o.geometry.dispose(); if (o.material.userData.tinted) o.material.dispose(); } });   // 거울은 렌더타깃까지 해제
 }
 function mountAll() { for (const id of [...objs.keys()]) unmountItem(id); for (const it of state.items) mountItem(it); }
@@ -264,7 +273,7 @@ function resolveWalls(it, x, z) {
   if (snx !== null) x += snx; if (snz !== null) z += snz;
   return { x, z };
 }
-addEventListener('pointerup', () => { if (drag) { if (drag.moved) save(); drag = null; orbit.enabled = !walk.isLocked; } });
+addEventListener('pointerup', () => { if (drag) { if (drag.moved) { save(); renderer.shadowMap.needsUpdate = true; } drag = null; orbit.enabled = !walk.isLocked; } });
 
 addEventListener('keydown', e => {
   if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
@@ -276,7 +285,7 @@ addEventListener('keydown', e => {
   if (e.code === 'KeyQ') rotateItem(it, -15); if (e.code === 'KeyE') rotateItem(it, 15); if (e.code === 'KeyR') rotateItem(it, 90);
 });
 
-function rotateItem(it, deg) { it.rot = ((it.rot || 0) + deg + 360) % 360; objs.get(it.id).rotation.y = THREE.MathUtils.degToRad(it.rot); refreshHelper(); fillItemFields(it); save(); }
+function rotateItem(it, deg) { it.rot = ((it.rot || 0) + deg + 360) % 360; objs.get(it.id).rotation.y = THREE.MathUtils.degToRad(it.rot); refreshHelper(); fillItemFields(it); renderer.shadowMap.needsUpdate = true; save(); }
 function removeItem(it) { unmountItem(it.id); state.items = state.items.filter(i => i !== it); deselect(); save(); }
 function rebuildItem(it) { mountItem(it); refreshHelper(); save(); }
 let seq = Date.now() % 100000;
