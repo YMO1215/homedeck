@@ -1,6 +1,6 @@
 // 건축(벽·바닥·천장·문·창·조명기구)과 가구 빌더.
 import * as THREE from 'three';
-import { S, H, mx, mz, WALLS, ROOMS, DOORS, FIXTURES, LIGHTS, CENTER } from './plan.js';
+import { S, H, mx, mz, WALLS, ROOMS, DOORS, FIXTURES, CENTER } from './plan.js';
 import { getMaterial, tinted, SPECIAL } from './materials.js';
 
 // ── 기본 도형 ──────────────────────────────────────────────────
@@ -138,26 +138,11 @@ export function buildDoors(scene) {
 export function buildFixtures(scene) {
   for (const f of FIXTURES) {
     const x = mx(f.x), z = mz(f.y);
-    if (f.kind === 'pendant') {
-      const g = new THREE.Group(); g.position.set(x, H, z); scene.add(g);
-      cyl(g, 0.06, 0.015, SPECIAL.lampBody, 0, -0.015, 0);
-      const cone = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.18, 12, 1, true), SPECIAL.lampBody);
-      cone.material = cone.material.clone(); cone.material.side = THREE.DoubleSide;
-      cone.position.y = -0.1; cone.rotation.x = Math.PI; g.add(cone);
-      const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.035, 12, 8), SPECIAL.lamp);
-      bulb.position.y = -0.16; g.add(bulb);
-    } else if (f.kind === 'panel') {
-      bx(scene, 0.6, 0.03, 0.6, SPECIAL.panelLight, x, H - 0.03, z, { cast: false });
-    } else if (f.kind === 'cassette') {
+    if (f.kind === 'cassette') {
       bx(scene, 0.84, 0.03, 0.84, P('frame.white'), x, H - 0.03, z, { cast: false });
       for (const [ox, oz, w, d] of [[0, -0.34, 0.6, 0.06], [0, 0.34, 0.6, 0.06], [-0.34, 0, 0.06, 0.6], [0.34, 0, 0.06, 0.6]])
         bx(scene, w, 0.005, d, SPECIAL.dark, x + ox, H - 0.035, z + oz, { cast: false });
     }
-  }
-  for (const l of LIGHTS) {
-    const pl = new THREE.PointLight(0xfff0dc, l.i, 0, 2);
-    pl.position.set(mx(l.x), H - 0.25, mz(l.y));
-    scene.add(pl);
   }
 }
 
@@ -391,6 +376,102 @@ export const BUILDERS = {
   box: { label: '박스(치수 입력)', parts: { body: 'wardrobe' }, def: { w: 0.6, d: 0.6, h: 0.6 },
     build(g, it, M) { bx(g, it.w, it.h, it.d, M('body'), 0, 0, 0); } },
 };
+
+// ── 조명 빌더 ──────────────────────────────────────────────────
+// 조명 아이템 공통 필드: lit(켜짐) · pw(세기 배율) · kelvin(색온도). 광원은 userData.base 에 기준 세기를 두고
+// app 이 lit·pw·전역 슬라이더를 곱해 intensity 를 정한다.
+const KELVIN = { 2700: '#ffc48a', 3000: '#ffd6a8', 3500: '#ffe3c4', 4000: '#fff0dc', 5000: '#fff8ef', 6500: '#ffffff' };
+export const KELVIN_OPTIONS = Object.keys(KELVIN).map(Number);
+const lampColor = (it) => KELVIN[it.kelvin] || KELVIN[3000];
+function glowMat(it, mult = 1) {
+  const on = it.lit !== false;
+  const m = new THREE.MeshStandardMaterial({ color: on ? '#fff8ee' : '#cfcfcf', emissive: lampColor(it), emissiveIntensity: on ? 1.5 * mult * Math.min(it.pw ?? 1, 2) : 0, roughness: 0.5 });
+  m.userData.tinted = true; return m;
+}
+function addPoint(g, it, x, y, z, base, dist = 0) {
+  const pl = new THREE.PointLight(lampColor(it), 0, dist, 2);
+  pl.position.set(x, y, z); pl.userData.base = base; g.add(pl); return pl;
+}
+function cord(g, x, y0, y1, z) { cyl(g, 0.0025, y1 - y0, SPECIAL.dark, x, y0, z, { seg: 6 }); }
+
+const LIGHT_BUILDERS = {
+  downlight: { label: '3인치 LED 매입등', light: true, parts: { trim: 'frame.white' }, def: { w: 0.09, d: 0.09, h: 0.01 },
+    build(g, it, M) {
+      const r = it.w / 2;
+      cyl(g, r + 0.006, 0.004, M('trim'), 0, H - 0.004, 0, { seg: 32 });                 // 트림 링
+      const disc = new THREE.Mesh(new THREE.CylinderGeometry(r - 0.004, r - 0.004, 0.003, 32), glowMat(it));
+      disc.position.y = H - 0.0035; g.add(disc);
+      addPoint(g, it, 0, H - 0.06, 0, 2.7);
+    } },
+  ledpanel: { label: 'LED 평판등', light: true, parts: { frame: 'frame.white' }, def: { w: 0.6, d: 0.6, h: 0.03 },
+    build(g, it, M) {
+      bx(g, it.w + 0.02, it.h, it.d + 0.02, M('frame'), 0, H - it.h, 0, { cast: false });
+      const m = new THREE.Mesh(boxGeo(it.w, 0.004, it.d), glowMat(it)); m.position.y = H - it.h - 0.002; g.add(m);
+      addPoint(g, it, 0, H - 0.1, 0, 9);
+    } },
+  pendant: { label: '식탁등(돔)', light: true, parts: { shade: 'shade' }, def: { w: 0.35, d: 0.35, h: 0.9 },
+    build(g, it, M) {
+      const drop = it.h, r = it.w / 2, sh = r * 0.7;
+      cyl(g, 0.045, 0.02, M('shade'), 0, H - 0.02, 0);
+      cord(g, 0, H - drop + sh, H - 0.02, 0);
+      const sm = M('shade').clone(); sm.side = THREE.DoubleSide; sm.userData.tinted = true;
+      const shade = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.35, r, sh, 32, 1, true), sm);
+      shade.position.y = H - drop + sh / 2; shade.castShadow = true; g.add(shade);
+      const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.03, 14, 10), glowMat(it, 1.3)); bulb.position.y = H - drop + sh * 0.4; g.add(bulb);
+      addPoint(g, it, 0, H - drop + sh * 0.3, 0, 6);
+    } },
+  pendant_line: { label: '식탁등(라인)', light: true, parts: { body: 'shade' }, def: { w: 1.0, d: 0.06, h: 0.8 },
+    build(g, it, M) {
+      const drop = it.h;
+      for (const x of [-it.w * 0.35, it.w * 0.35]) { cyl(g, 0.02, 0.01, M('body'), x, H - 0.01, 0); cord(g, x, H - drop + 0.04, H - 0.01, 0); }
+      bx(g, it.w, 0.04, it.d, M('body'), 0, H - drop, 0);
+      const s = new THREE.Mesh(boxGeo(it.w - 0.02, 0.004, it.d - 0.02), glowMat(it)); s.position.y = H - drop - 0.002; g.add(s);
+      const n = Math.max(1, Math.round(it.w / 0.6));
+      for (let i = 0; i < n; i++) addPoint(g, it, -it.w / 2 + it.w * (i + 0.5) / n, H - drop - 0.03, 0, 6 / n);
+    } },
+  globe: { label: '펜던트(유리 구)', light: true, parts: { metal: 'steel' }, def: { w: 0.25, d: 0.25, h: 0.7 },
+    build(g, it, M) {
+      const drop = it.h, r = it.w / 2;
+      cyl(g, 0.04, 0.02, M('metal'), 0, H - 0.02, 0); cord(g, 0, H - drop + r, H - 0.02, 0);
+      const gm = new THREE.MeshPhysicalMaterial({ color: '#ffffff', transparent: true, opacity: 0.3, roughness: 0.05 }); gm.userData.tinted = true;
+      const glass = new THREE.Mesh(new THREE.SphereGeometry(r, 24, 16), gm); glass.position.y = H - drop + r; g.add(glass);
+      const bulb = new THREE.Mesh(new THREE.SphereGeometry(r * 0.35, 16, 12), glowMat(it, 1.4)); bulb.position.y = H - drop + r; g.add(bulb);
+      addPoint(g, it, 0, H - drop + r, 0, 5);
+    } },
+  ring: { label: '디자인등(링)', light: true, parts: { body: 'frame.black' }, def: { w: 0.6, d: 0.6, h: 0.5 },
+    build(g, it, M) {
+      const drop = it.h, r = it.w / 2;
+      cyl(g, 0.05, 0.02, M('body'), 0, H - 0.02, 0);
+      for (let k = 0; k < 3; k++) { const a = k * Math.PI * 2 / 3; cord(g, Math.cos(a) * r, H - drop + 0.02, H - 0.02, Math.sin(a) * r); }
+      const t = new THREE.Mesh(new THREE.TorusGeometry(r, 0.025, 12, 64), M('body')); t.rotation.x = Math.PI / 2; t.position.y = H - drop; t.castShadow = true; g.add(t);
+      const gl = new THREE.Mesh(new THREE.TorusGeometry(r, 0.014, 8, 64), glowMat(it)); gl.rotation.x = Math.PI / 2; gl.position.y = H - drop - 0.015; g.add(gl);
+      for (let k = 0; k < 4; k++) { const a = k * Math.PI / 2; addPoint(g, it, Math.cos(a) * r * 0.7, H - drop - 0.05, Math.sin(a) * r * 0.7, 2); }
+    } },
+  cove: { label: '간접조명(라인)', light: true, parts: { lip: 'ceiling' }, def: { w: 2.0, d: 0.12, h: 0.1 },
+    build(g, it, M) {
+      // 천장에 매단 막이판 뒤에서 빛이 새어 천장·벽을 씻어 올린다. 정면(+z)이 방 쪽, 등은 벽(-z) 쪽에 붙인다.
+      bx(g, it.w, it.h, 0.02, M('lip'), 0, H - it.h, it.d / 2 - 0.01);
+      bx(g, it.w, 0.02, it.d, M('lip'), 0, H - it.h, 0, { cast: false });
+      const s = new THREE.Mesh(boxGeo(it.w - 0.02, 0.006, 0.02), glowMat(it, 1.2)); s.position.set(0, H - it.h + 0.023, -it.d / 2 + 0.03); g.add(s);
+      const n = Math.max(1, Math.round(it.w / 0.8));
+      for (let i = 0; i < n; i++) addPoint(g, it, -it.w / 2 + it.w * (i + 0.5) / n, H - it.h / 2, -it.d / 2 + 0.03, 1.8, 4);
+    } },
+  track: { label: '레일 스팟(3구)', light: true, parts: { body: 'frame.black' }, def: { w: 1.2, d: 0.04, h: 0.12 },
+    build(g, it, M) {
+      bx(g, it.w, 0.03, 0.035, M('body'), 0, H - 0.03, 0);
+      const n = Math.max(1, Math.round(it.w / 0.4));
+      for (let i = 0; i < n; i++) {
+        const x = -it.w / 2 + it.w * (i + 0.5) / n;
+        cyl(g, 0.012, 0.05, M('body'), x, H - 0.08, 0);
+        const head = cyl(g, 0.03, 0.1, M('body'), x, H - 0.18, 0); head.rotation.x = 0.35; head.position.z = 0.03;
+        const lens = new THREE.Mesh(new THREE.CircleGeometry(0.024, 16), glowMat(it)); lens.position.set(x, H - 0.19, 0.06); lens.rotation.x = -Math.PI / 2 + 0.35; g.add(lens);
+        const sp = new THREE.SpotLight(lampColor(it), 0, 7, 0.55, 0.5, 2);
+        sp.position.set(x, H - 0.15, 0.03); sp.target.position.set(x, 0, 0.8); sp.userData.base = 6; g.add(sp, sp.target);
+      }
+    } },
+};
+Object.assign(BUILDERS, LIGHT_BUILDERS);
+export const CATALOG_LIGHTS = Object.keys(LIGHT_BUILDERS);
 
 // 카탈로그에 노출할 타입 순서
 export const CATALOG = ['bed', 'bed1', 'sofa', 'armchair', 'ottoman', 'table', 'chair', 'desk', 'wardrobe', 'drawers', 'bookshelf', 'lowcab', 'tallcab', 'tvstand', 'fridge', 'kcounter', 'kupper', 'plant', 'rug', 'lamp', 'box'];

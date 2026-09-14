@@ -22,6 +22,7 @@
   <button id="btn-walk" title="마우스로 둘러보고 WASD 로 걷기 · Esc 로 나가기">🚶 걷기</button>
   <label title="화면 밝기">밝기 <input id="exposure" type="range" min="0.4" max="2" step="0.05" value="1"></label>
   <label title="창으로 들어오는 햇빛">햇빛 <input id="sunlight" type="range" min="0" max="2" step="0.1" value="1"></label>
+  <label title="실내 조명 전체 세기">조명 <input id="lamp" type="range" min="0" max="2" step="0.1" value="1"></label>
   <span class="sp"></span>
   <button id="btn-shot" title="현재 화면 PNG 저장">📷</button>
   <button id="btn-export" title="배치·색 JSON 내보내기">내보내기</button>
@@ -46,6 +47,9 @@
   <section id="pane-furn" class="pane" hidden>
     <p class="hint">가구를 누르면 화면 가운데 바닥에 놓입니다. <b>드래그</b>로 옮기고 <b>Q/E</b>(15°)·<b>R</b>(90°)로 돌리고 <b>Delete</b>로 지웁니다.</p>
     <div id="catalog" class="catalog"></div>
+    <h4>조명</h4>
+    <p class="hint">기본은 3인치 LED 매입등. 천장에 붙으니 <b>탑뷰</b>나 위를 보며 클릭하면 선택됩니다. 선택 후 켜짐·세기·색온도 조절.</p>
+    <div id="catalog-lights" class="catalog"></div>
     <div class="row2">
       <button id="btn-unlock-all">기본 가구 잠금 해제</button>
       <button id="btn-lock-all">기본 가구 잠금</button>
@@ -68,6 +72,12 @@
     <ul>
       <li>기본 배치 가구는 잠겨 있습니다. 선택 후 <b>잠금</b>을 풀면 옮길 수 있습니다</li>
       <li>치수(폭·깊이·높이)는 선택 패널에서 m 단위로 직접 입력</li>
+    </ul>
+    <h4>조명</h4>
+    <ul>
+      <li>매입등·평판등·식탁등·펜던트·링 디자인등·간접조명·레일 스팟을 가구처럼 추가·이동·삭제</li>
+      <li>선택하면 켜짐/세기/색온도(2700–6500K). 상단 <b>조명</b> 슬라이더는 전체 세기</li>
+      <li>간접조명은 정면(+z)이 방 쪽 — 벽에 붙일 때 R 로 돌려 맞춤</li>
     </ul>
     <h4>저장</h4>
     <ul>
@@ -93,6 +103,12 @@
     <button id="ip-rotl">↶ 15°</button><button id="ip-rotr">↷ 15°</button><button id="ip-rot90">90°</button>
     <button id="ip-dup">복제</button><button id="ip-del" class="danger">삭제</button>
   </div>
+  <div id="ip-light" hidden>
+    <label class="row"><span>켜짐</span><input id="ip-lit" type="checkbox"></label>
+    <label class="row"><span>세기</span><input id="ip-pw" type="range" min="0" max="3" step="0.1"></label>
+    <label class="row"><span>색온도</span><select id="ip-kelvin"></select></label>
+  </div>
+  <p id="ip-dims" class="hint"></p>
   <div id="ip-parts"></div>
 </div>
 

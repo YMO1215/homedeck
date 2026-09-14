@@ -41,6 +41,7 @@ export const PAINTS = {
   'pot':            { label: '화분',            group: '가구', color: '#8a7a6a', finish: 'plain' },
   'rug':            { label: '러그',            group: '가구', color: '#b7aa9a', finish: 'fabric' },
   'chair':          { label: '의자',            group: '가구', color: '#2e2e2e', finish: 'fabric' },
+  'shade':          { label: '조명 갓·바디',    group: '조명', color: '#2b2b2b', finish: 'plain', rough: 0.5 },
 };
 
 export const DEFAULT_PAINTS = JSON.parse(JSON.stringify(PAINTS));
