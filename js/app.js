@@ -119,11 +119,11 @@ function applyDayNight() {
   hemi.intensity = n ? 0.015 : 0.55;
   scene.environmentIntensity = n ? 0.02 : 1;
   scene.background = n ? NIGHT_BG : DAY_BG;
-  ('#sunlight').disabled = n;
-  ('#btn-night').textContent = n ? '☀ 낮' : '🌙 밤';
+  $('#sunlight').disabled = n;
+  $('#btn-night').textContent = n ? '☀ 낮' : '🌙 밤';
   document.body.classList.toggle('night', n);
 }
-('#btn-night').onclick = () => { state.night = !state.night; applyDayNight(); save(); flash(state.night ? '밤 — 실내 조명만' : '낮'); };
+$('#btn-night').onclick = () => { state.night = !state.night; applyDayNight(); save(); flash(state.night ? '밤 — 실내 조명만' : '낮'); };
 renderer.toneMappingExposure = state.exposure; applyDayNight();
 
 // ── 시점 ───────────────────────────────────────────────────────
