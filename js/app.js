@@ -14,6 +14,9 @@ const $ = (s) => document.querySelector(s);
 // ── 상태 ───────────────────────────────────────────────────────
 const state = { items: [], exposure: 1.0, sun: 0.7, lamp: 1.0, scheme: 'base', night: false };
 const objs = new Map();          // itemId → Group
+// walking: 걷기 버튼을 누른 순간부터 true. (PointerLockControls 는 'lock' 이벤트를 보낸 뒤에야 isLocked 를 세워서
+//  이벤트 안에서 isLocked 를 보면 아직 false — 센서등이 켜진 채 시작하던 원인). applyLamp 보다 앞에 선언
+let walking = false;
 
 function loadState() {
   try {
@@ -108,7 +111,7 @@ function enforceShadowBudget() {
 }
 // 조명 아이템: 광원 세기 = 기준(base) × 켜짐 × 아이템 배율(pw) × 전역 슬라이더
 function applyLamp(g, it) {
-  const sensor = it.type === 'sensorlight' && walk.isLocked ? (it._sensorOn ? 1 : 0) : 1;   // 센서등: 걷기 모드에서만 감지 상태를 따른다
+  const sensor = it.type === 'sensorlight' && walking ? (it._sensorOn ? 1 : 0) : 1;   // 센서등: 걷기 모드에서만 감지 상태를 따른다
   const f = (it.lit === false ? 0 : (it.pw ?? 1)) * state.lamp * sensor;
   g.traverse(o => {
     if (o.isLight) o.intensity = (o.userData.base || 0) * f;
@@ -175,14 +178,19 @@ const keys = { has: (c) => keyTime.has(c), get size() { return keyTime.size; } }
 function pruneKeys() { const now = performance.now(); for (const [c, t] of keyTime) if (now - t > 1100) keyTime.delete(c); }   // 윈도우 반복 지연 최대 1초
 // 걷기 시작: 현관문 밖 2.5 m 지점에서 문(북쪽)을 바라보며 들어간다 — 현관 센서등(z 8,300)까지 3.2 m 라 꺼진 상태로 시작
 const WALK_START = { pos: [5850, 11500], look: [5850, 8000] };
+
 $('#btn-walk').onclick = () => {
+  walking = true; orbit.enabled = false;   // 잠금 전 프레임에서 orbit.update() 가 시선을 되돌리지 않게
+  for (const it of state.items) if (it.type === 'sensorlight') { it._sensorOn = false; it._sensorT = 0; }
+  applyLampAll();
   camera.position.set(mx(WALK_START.pos[0]), 1.5, mz(WALK_START.pos[1]));
   camera.lookAt(mx(WALK_START.look[0]), 1.3, mz(WALK_START.look[1]));
   invalidate(); walk.lock();
 };
-walk.addEventListener('lock', () => { document.body.classList.add('walking'); orbit.enabled = false; keyTime.clear(); for (const it of state.items) if (it.type === 'sensorlight') { it._sensorOn = false; it._sensorT = 0; } applyLampAll(); });
+document.addEventListener('pointerlockerror', () => { walking = false; orbit.enabled = true; applyLampAll(); flash('걷기 모드를 시작할 수 없습니다'); });
+walk.addEventListener('lock', () => { walking = true; document.body.classList.add('walking'); orbit.enabled = false; keyTime.clear(); applyLampAll(); });
 walk.addEventListener('unlock', () => {
-  document.body.classList.remove('walking'); orbit.enabled = true; keyTime.clear(); applyLampAll();   // 걷기 종료: 센서등은 다시 항상 켜짐
+  walking = false; document.body.classList.remove('walking'); orbit.enabled = true; keyTime.clear(); applyLampAll();   // 걷기 종료: 센서등은 다시 항상 켜짐
   const dir = new THREE.Vector3(); camera.getWorldDirection(dir);
   orbit.target.copy(camera.position).addScaledVector(dir, 3); orbit.update();
 });
@@ -539,7 +547,7 @@ function tick() {
     camera.position.y = 1.5;
     updateSensors(dt);
     moving = keys.size > 0;
-  } else moving = orbit.update();          // 감쇠 중이면 true
+  } else if (!walking) moving = orbit.update();   // 감쇠 중이면 true (걷기 진입 중엔 orbit 이 시선을 건드리지 않게)
   if (moving || drag || dirty > 0) { renderer.render(scene, camera); if (dirty > 0) dirty--; }
   requestAnimationFrame(tick);
 }
