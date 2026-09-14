@@ -681,7 +681,7 @@ const LIGHT_BUILDERS = {
       for (let i = 0; i < n; i++) {
         const x = -it.w / 2 + it.w * (i + 0.5) / n;
         const sp = new THREE.SpotLight(lampColor(it), 0, 6, 0.6, 0.5, 2);
-        sp.position.set(x, H - 0.05, 0); sp.target.position.set(x, 0, 0); sp.userData.base = cdSpot(wattOf(LIGHT_BUILDERS.maglens, it), 0.6) / n; g.add(sp, sp.target);
+        sp.position.set(x, H - 0.05, 0); sp.target.position.set(x, 0, 0); sp.castShadow = true; sp.shadow.mapSize.set(512, 512); sp.shadow.bias = -0.0005; sp.userData.base = cdSpot(wattOf(LIGHT_BUILDERS.maglens, it), 0.6) / n; g.add(sp, sp.target);
       }
     } },
   magspot: { label: '마그네틱 원형 스포트(10W)', light: true, watt: 10, parts: { body: 'frame.black' }, def: { w: 0.03, d: 0.03, h: 0.1 },
@@ -693,7 +693,7 @@ const LIGHT_BUILDERS = {
       const lens = new THREE.Mesh(new THREE.CircleGeometry(0.011, 16), glowMat(it, 1.4));
       lens.position.set(0, H - 0.075 - 0.037 * Math.cos(tilt), 0.012 + 0.037 * Math.sin(tilt)); lens.rotation.x = Math.PI / 2 - tilt; g.add(lens);
       const sp = new THREE.SpotLight(lampColor(it), 0, 7, 0.45, 0.5, 2);
-      sp.position.set(0, H - 0.1, 0.02); sp.target.position.set(0, 0, 0.02 + (H - 0.1) * Math.tan(tilt)); sp.userData.base = cdSpot(wattOf(LIGHT_BUILDERS.magspot, it), 0.45); g.add(sp, sp.target);
+      sp.position.set(0, H - 0.1, 0.02); sp.target.position.set(0, 0, 0.02 + (H - 0.1) * Math.tan(tilt)); sp.castShadow = true; sp.shadow.mapSize.set(512, 512); sp.shadow.bias = -0.0005; sp.userData.base = cdSpot(wattOf(LIGHT_BUILDERS.magspot, it), 0.45); g.add(sp, sp.target);
     } },
   magdual: { label: '마그네틱 사각 듀얼 스포트(20W)', light: true, watt: 20, parts: { body: 'frame.black' }, def: { w: 0.075, d: 0.035, h: 0.04 },
     build(g, it, M) {
@@ -701,7 +701,7 @@ const LIGHT_BUILDERS = {
       for (const x of [-it.w / 4, it.w / 4]) {
         const lens = new THREE.Mesh(new THREE.CircleGeometry(0.011, 16), glowMat(it, 1.4)); lens.position.set(x, H - it.h - 0.001, 0); lens.rotation.x = Math.PI / 2; g.add(lens);
         const sp = new THREE.SpotLight(lampColor(it), 0, 7, 0.5, 0.5, 2);
-        sp.position.set(x, H - 0.06, 0); sp.target.position.set(x, 0, 0); sp.userData.base = cdSpot(wattOf(LIGHT_BUILDERS.magdual, it), 0.5) / 2; g.add(sp, sp.target);
+        sp.position.set(x, H - 0.06, 0); sp.target.position.set(x, 0, 0); sp.castShadow = true; sp.shadow.mapSize.set(512, 512); sp.shadow.bias = -0.0005; sp.userData.base = cdSpot(wattOf(LIGHT_BUILDERS.magdual, it), 0.5) / 2; g.add(sp, sp.target);
       }
     } },
   cove: { label: '간접조명(라인)', light: true, watt: (it) => Math.round(it.w * 10), parts: { lip: 'ceiling' }, def: { w: 2.0, d: 0.12, h: 0.1 },
@@ -723,7 +723,7 @@ const LIGHT_BUILDERS = {
         const head = cyl(g, 0.03, 0.1, M('body'), x, H - 0.18, 0); head.rotation.x = 0.35; head.position.z = 0.03;
         const lens = new THREE.Mesh(new THREE.CircleGeometry(0.024, 16), glowMat(it)); lens.position.set(x, H - 0.19, 0.06); lens.rotation.x = -Math.PI / 2 + 0.35; g.add(lens);
         const sp = new THREE.SpotLight(lampColor(it), 0, 7, 0.55, 0.5, 2);
-        sp.position.set(x, H - 0.15, 0.03); sp.target.position.set(x, 0, 0.8); sp.userData.base = cdSpot(wattOf(LIGHT_BUILDERS.track, it), 0.55) / n; g.add(sp, sp.target);
+        sp.position.set(x, H - 0.15, 0.03); sp.target.position.set(x, 0, 0.8); sp.castShadow = true; sp.shadow.mapSize.set(512, 512); sp.shadow.bias = -0.0005; sp.userData.base = cdSpot(wattOf(LIGHT_BUILDERS.track, it), 0.55) / n; g.add(sp, sp.target);
       }
     } },
 };

@@ -12,7 +12,7 @@ const SAVE_KEY = 'homedeck.v1';
 const $ = (s) => document.querySelector(s);
 
 // ── 상태 ───────────────────────────────────────────────────────
-const state = { items: [], exposure: 1.0, sun: 1.0, lamp: 1.0, scheme: 'base' };
+const state = { items: [], exposure: 1.0, sun: 1.0, lamp: 1.0, scheme: 'base', night: false };
 const objs = new Map();          // itemId → Group
 
 function loadState() {
@@ -26,7 +26,7 @@ function applySaved(s) {
   // 평면 좌표계가 바뀐 저장본이면 가구 배치는 기본값으로, 색·마감만 이어받는다
   state.items = s.plan === PLAN_VERSION ? s.items : JSON.parse(JSON.stringify(DEFAULT_ITEMS));
   if (s.plan !== PLAN_VERSION) setTimeout(() => flash('평면·조명 구성이 바뀌어 배치를 기본값으로 되돌렸습니다(색은 유지)'), 800);
-  state.exposure = s.exposure ?? 1.0; state.sun = s.sun ?? 1.0; state.lamp = Math.min(1, s.lamp ?? 1.0); state.scheme = s.scheme || 'base';
+  state.exposure = s.exposure ?? 1.0; state.sun = s.sun ?? 1.0; state.lamp = Math.min(1, s.lamp ?? 1.0); state.scheme = s.scheme || 'base'; state.night = !!s.night;
   for (const it of s.items || []) if (it.pw > 1) it.pw = 1;   // 조광은 정격(100%)을 넘지 않는다 — 옛 저장본 보정
   // pv 2 부터는 기본값과 다른 페인트만 저장 → 코드의 새 기본 색이 옛 저장본에 덮이지 않는다.
   // 옛 형식(pv 없음)은 모든 키에 당시 기본값이 들어 있어 구분이 안 되므로 색을 이어받지 않는다.
@@ -40,7 +40,7 @@ function serialize() {
     const p = PAINTS[k], d = DEFAULT_PAINTS[k];
     if (PAINT_FIELDS.some(f => (p[f] ?? null) !== (d[f] ?? null))) { paints[k] = {}; for (const f of PAINT_FIELDS) paints[k][f] = p[f] ?? null; }   // 비운 값은 null 로(JSON 유지)
   }
-  return { v: 1, pv: 2, plan: PLAN_VERSION, items: state.items, paints, exposure: state.exposure, sun: state.sun, lamp: state.lamp, scheme: state.scheme, savedAt: new Date().toISOString() };
+  return { v: 1, pv: 2, plan: PLAN_VERSION, items: state.items, paints, exposure: state.exposure, sun: state.sun, lamp: state.lamp, scheme: state.scheme, night: state.night, savedAt: new Date().toISOString() };
 }
 let saveTimer = 0;
 function save() {
@@ -110,7 +110,21 @@ function mountAll() { for (const id of [...objs.keys()]) unmountItem(id); for (c
 const saved = loadState();
 if (saved) applySaved(saved); else state.items = JSON.parse(JSON.stringify(DEFAULT_ITEMS));
 mountAll();
-renderer.toneMappingExposure = state.exposure; sun.intensity = 2.2 * state.sun;
+// ── 낮/밤 ─────────────────────────────────────────────────────
+// 밤: 바깥에서 들어오는 빛(햇빛·하늘·환경맵) 0 → 실내 등만 빛을 낸다. 등이 없는 방은 다른 방에서 새어 드는 빛만큼만 보인다.
+const DAY_BG = new THREE.Color('#cfd8e3'), NIGHT_BG = new THREE.Color('#0a0d12');
+function applyDayNight() {
+  const n = state.night;
+  sun.intensity = n ? 0 : 2.2 * state.sun;
+  hemi.intensity = n ? 0.015 : 0.55;
+  scene.environmentIntensity = n ? 0.02 : 1;
+  scene.background = n ? NIGHT_BG : DAY_BG;
+  ('#sunlight').disabled = n;
+  ('#btn-night').textContent = n ? '☀ 낮' : '🌙 밤';
+  document.body.classList.toggle('night', n);
+}
+('#btn-night').onclick = () => { state.night = !state.night; applyDayNight(); save(); flash(state.night ? '밤 — 실내 조명만' : '낮'); };
+renderer.toneMappingExposure = state.exposure; applyDayNight();
 
 // ── 시점 ───────────────────────────────────────────────────────
 function setView(v) {
@@ -430,7 +444,7 @@ $('#btn-panel').onclick = () => document.body.classList.toggle('panel-off');
 $('#exposure').value = state.exposure;
 $('#exposure').oninput = (e) => { state.exposure = +e.target.value; renderer.toneMappingExposure = state.exposure; save(); };
 $('#sunlight').value = state.sun;
-$('#sunlight').oninput = (e) => { state.sun = +e.target.value; sun.intensity = 2.2 * state.sun; save(); };
+$('#sunlight').oninput = (e) => { state.sun = +e.target.value; applyDayNight(); save(); };
 $('#lamp').value = state.lamp;
 $('#lamp').oninput = (e) => { state.lamp = +e.target.value; applyLampAll(); save(); };
 
@@ -440,7 +454,7 @@ $('#btn-export').onclick = () => {
 };
 $('#file-import').onchange = async (e) => {
   const f = e.target.files[0]; if (!f) return;
-  try { const s = JSON.parse(await f.text()); if (s.v !== 1) throw 0; applySaved(s); mountAll(); deselect(); renderer.toneMappingExposure = state.exposure; sun.intensity = 2.2 * state.sun; $('#lamp').value = state.lamp; document.querySelectorAll('.prow').forEach(r => syncPaintRows(r.dataset.key)); markScheme(); save(); flash('불러옴'); }
+  try { const s = JSON.parse(await f.text()); if (s.v !== 1) throw 0; applySaved(s); mountAll(); deselect(); renderer.toneMappingExposure = state.exposure; applyDayNight(); $('#lamp').value = state.lamp; document.querySelectorAll('.prow').forEach(r => syncPaintRows(r.dataset.key)); markScheme(); save(); flash('불러옴'); }
   catch { flash('파일 형식이 맞지 않습니다'); }
   e.target.value = '';
 };
@@ -450,7 +464,7 @@ $('#btn-reset').onclick = () => {
   localStorage.removeItem(SAVE_KEY);
   for (const k of Object.keys(PAINTS)) updatePaint(k, { ...DEFAULT_PAINTS[k] });
   state.items = JSON.parse(JSON.stringify(DEFAULT_ITEMS)); state.exposure = 1; state.sun = 1; state.lamp = 1;
-  renderer.toneMappingExposure = 1; sun.intensity = 2.2; $('#exposure').value = 1; $('#sunlight').value = 1; $('#lamp').value = 1;
+  state.night = false; renderer.toneMappingExposure = 1; applyDayNight(); $('#exposure').value = 1; $('#sunlight').value = 1; $('#lamp').value = 1;
   state.scheme = 'base'; markScheme();
   mountAll(); deselect(); document.querySelectorAll('.prow').forEach(r => syncPaintRows(r.dataset.key)); flash('원본 구조로 되돌렸습니다');
 };
