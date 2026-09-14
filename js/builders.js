@@ -1,6 +1,7 @@
 // 건축(벽·바닥·천장·문·창·조명기구)과 가구 빌더.
 import * as THREE from 'three';
 import { RectAreaLightUniformsLib } from 'three/addons/lights/RectAreaLightUniformsLib.js';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { S, H, mx, mz, WALLS, ROOMS, DOORS, FIXTURES, CENTER } from './plan.js';
 RectAreaLightUniformsLib.init();   // 면광원(평판등·라인등)용 LUT — 한 번만
 import { getMaterial, tinted, SPECIAL } from './materials.js';
@@ -24,6 +25,20 @@ export function bx(parent, w, h, d, mat, x = 0, y = 0, z = 0, o = {}) {
   m.position.set(x, y + h / 2, z);
   m.castShadow = o.cast !== false; m.receiveShadow = o.receive !== false;
   if (o.paint) m.userData.paint = o.paint;
+  parent.add(m); return m;
+}
+// 모서리가 둥근 박스 — 매트리스·쿠션·도기 같은 부드러운 물건. r: 모서리 반지름
+export function rbx(parent, w, h, d, mat, x = 0, y = 0, z = 0, r = 0.03, o = {}) {
+  const rr = Math.min(r, w / 2, h / 2, d / 2);
+  const m = new THREE.Mesh(new RoundedBoxGeometry(w, h, d, o.seg || 4, rr), mat);
+  m.position.set(x, y + h / 2, z);
+  m.castShadow = o.cast !== false; m.receiveShadow = o.receive !== false;
+  parent.add(m); return m;
+}
+// 회전체(도기 볼 등): 프로파일 [[r, y], ...] 를 y 축으로 회전
+export function lathe(parent, profile, mat, x = 0, y = 0, z = 0, seg = 32) {
+  const m = new THREE.Mesh(new THREE.LatheGeometry(profile.map(([r, yy]) => new THREE.Vector2(r, yy)), seg), mat);
+  m.position.set(x, y, z); m.castShadow = true; m.receiveShadow = true;
   parent.add(m); return m;
 }
 export function cyl(parent, r, h, mat, x = 0, y = 0, z = 0, o = {}) {
@@ -163,7 +178,8 @@ export function buildExterior(scene) {
     bx(scene, w, h, d, SPECIAL.building, CENTER.x + ox, 0, CENTER.z + oz, { cast: false });
 }
 
-// 장식 책 재질(칠하지 않음)
+// 도기 볼 안쪽(회전체를 위에서 들여다보므로 양면) · 장식 책 재질(칠하지 않음)
+const BOWL_MAT = new THREE.MeshStandardMaterial({ color: '#ececea', roughness: 0.18, side: THREE.DoubleSide });
 const BOOK_MATS = ['#c9b9a2', '#7a8b6f', '#3f5d7a', '#8b3a3a', '#e6dfd2', '#2e2e2e', '#b08d57', '#d7a86e', '#556b5a', '#f2f2f2'].map(c => new THREE.MeshStandardMaterial({ color: c, roughness: 0.85 }));
 
 // ── 가구 빌더 ──────────────────────────────────────────────────
@@ -293,30 +309,32 @@ export const BUILDERS = {
   bed: { label: '침대(퀸)', parts: { frame: 'bed.frame', linen: 'bed.linen' }, def: { w: 1.55, d: 2.1, h: 0.5 },
     build(g, it, M) {
       const { w, d } = it;
+      // 프레임 + 매트리스(둥근 모서리) + 이불(앞쪽으로 갈수록 살짝 두꺼운 둥근 덩어리) + 베개 2개(통통한 라운드)
       bx(g, w + 0.08, 0.06, d + 0.08, M('frame'), 0, 0.17, 0);
+      bx(g, w + 0.08, 0.45, 0.04, M('frame'), 0, 0.17, -d / 2 + 0.02);                      // 헤드보드(발자국 안쪽)
       for (const [x, z] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) bx(g, 0.06, 0.17, 0.06, M('frame'), x * (w / 2 - 0.05), 0, z * (d / 2 - 0.08));
-      bx(g, w, 0.22, d, M('linen'), 0, 0.23, 0);
-      bx(g, w + 0.03, 0.08, d * 0.68, M('linen'), 0, 0.45, d * 0.16);
-      bx(g, w * 0.4, 0.12, 0.42, M('linen'), -w * 0.24, 0.45, -d / 2 + 0.3); bx(g, w * 0.4, 0.12, 0.42, M('linen'), w * 0.24, 0.45, -d / 2 + 0.3);
+      rbx(g, w, 0.22, d, M('linen'), 0, 0.23, 0, 0.06);
+      rbx(g, w + 0.03, 0.09, d * 0.66, M('linen'), 0, 0.44, d * 0.17, 0.045);
+      for (const sx of [-1, 1]) rbx(g, w * 0.4, 0.13, 0.4, M('linen'), sx * w * 0.23, 0.45, -d / 2 + 0.3, 0.06);
     } },
   bed1: { label: '침대(싱글)', parts: { frame: 'bed.frame', linen: 'bed.linen' }, def: { w: 1.0, d: 2.0, h: 0.5 },
     build(g, it, M) { BUILDERS.bed.build(g, it, M); } },
   sofa: { label: '소파(3인)', parts: { fabric: 'sofa' }, def: { w: 2.6, d: 0.95, h: 0.75 },
     build(g, it, M) {
       const { w, d, h } = it, n = Math.max(1, Math.round(w / 0.85)), a = 0.18, m = M('fabric');
-      bx(g, w, 0.32, d, m, 0, 0.05, 0);
-      bx(g, w, h - 0.05, 0.2, m, 0, 0.05, -d / 2 + 0.1);
-      bx(g, a, 0.6, d, m, -w / 2 + a / 2, 0.05, 0); bx(g, a, 0.6, d, m, w / 2 - a / 2, 0.05, 0);
+      rbx(g, w, 0.32, d, m, 0, 0.05, 0, 0.05);                                             // 베이스
+      rbx(g, w, h - 0.05, 0.2, m, 0, 0.05, -d / 2 + 0.1, 0.05);                            // 등판
+      rbx(g, a, 0.6, d, m, -w / 2 + a / 2, 0.05, 0, 0.07); rbx(g, a, 0.6, d, m, w / 2 - a / 2, 0.05, 0, 0.07);   // 팔걸이
       const cw = (w - 2 * a) / n;
-      for (let i = 0; i < n; i++) {
-        bx(g, cw - 0.03, 0.14, d - 0.3, m, -w / 2 + a + cw * (i + 0.5), 0.37, 0.1);
-        bx(g, cw - 0.05, 0.42, 0.14, m, -w / 2 + a + cw * (i + 0.5), 0.37, -d / 2 + 0.28);
+      for (let i = 0; i < n; i++) {                                                         // 방석·등쿠션은 통통한 라운드
+        rbx(g, cw - 0.03, 0.16, d - 0.3, m, -w / 2 + a + cw * (i + 0.5), 0.36, 0.1, 0.06);
+        rbx(g, cw - 0.05, 0.44, 0.16, m, -w / 2 + a + cw * (i + 0.5), 0.36, -d / 2 + 0.28, 0.07);
       }
     } },
   armchair: { label: '1인 소파', parts: { fabric: 'sofa' }, def: { w: 0.9, d: 0.9, h: 0.75 },
     build(g, it, M) { BUILDERS.sofa.build(g, it, M); } },
   ottoman: { label: '스툴', parts: { fabric: 'sofa' }, def: { w: 0.8, d: 0.8, h: 0.42 },
-    build(g, it, M) { bx(g, it.w, it.h - 0.1, it.d, M('fabric'), 0, 0.05, 0); bx(g, it.w - 0.04, 0.1, it.d - 0.04, M('fabric'), 0, it.h - 0.1, 0); } },
+    build(g, it, M) { rbx(g, it.w, it.h - 0.1, it.d, M('fabric'), 0, 0.05, 0, 0.06); rbx(g, it.w - 0.02, 0.12, it.d - 0.02, M('fabric'), 0, it.h - 0.11, 0, 0.06); } },
   tvwall: { label: 'TV 붙박이장', parts: { body: 'tvwall', shelf: 'tvwall.shelf', tv: 'appliance' }, def: { w: 3.8, d: 0.36, h: 2.28 },
     build(g, it, M) {
       const { w, d, h } = it, cw = 0.65;
@@ -345,16 +363,17 @@ export const BUILDERS = {
     } },
   basin: { label: '세면대', parts: { body: 'sanitary' }, def: { w: 0.6, d: 0.45, h: 0.85 },
     build(g, it, M) {
-      bx(g, it.w, 0.26, it.d, M('body'), 0, it.h - 0.26, 0);
-      bx(g, it.w - 0.1, 0.004, it.d - 0.12, SPECIAL.dark, 0, it.h + 0.001, 0.02, { cast: false });
+      rbx(g, it.w, 0.26, it.d, M('body'), 0, it.h - 0.26, 0, 0.05);                       // 둥근 모서리 도기
+      const bowl = lathe(g, [[0, 0], [0.12, 0.01], [0.2, 0.06], [0.24, 0.13]], BOWL_MAT, 0, it.h - 0.13, 0.02, 32);
+      bowl.scale.set(Math.min(1, (it.w - 0.1) / 0.48), 1, Math.min(1, (it.d - 0.12) / 0.48));   // 볼 오목면
       faucet(g, 0, it.h, -it.d / 2 + 0.07);
     } },
   basin_wall: { label: '벽걸이 사각 세면대', parts: { body: 'sanitary', steel: 'steel' }, def: { w: 0.5, d: 0.42, h: 0.85 },
     build(g, it, M) {                        // 렌더의 각진 벽부착 세면기 — 상단 h, 몸통 0.36
       const m = M('body'), bh = 0.36, y0 = it.h - bh;
-      bx(g, it.w, bh, it.d, m, 0, y0, 0);
-      bx(g, it.w - 0.08, 0.004, it.d - 0.12, SPECIAL.dark, 0, it.h + 0.001, 0.02, { cast: false });      // 볼 안쪽
-      bx(g, it.w - 0.12, 0.06, it.d - 0.16, m, 0, it.h - 0.06, 0.02, { cast: false });                   // 볼 바닥(살짝 낮게)
+      rbx(g, it.w, bh, it.d, m, 0, y0, 0, 0.035);                                                        // 각진 도기, 모서리만 살짝 둥글게
+      const bowl = lathe(g, [[0, 0], [0.14, 0.008], [0.21, 0.05], [0.24, 0.12]], BOWL_MAT, 0, it.h - 0.12, 0.02, 32);
+      bowl.scale.set((it.w - 0.08) / 0.48, 1, (it.d - 0.12) / 0.48);                                    // 볼 오목면(사각에 맞게 늘림)
       faucet(g, 0, it.h, -it.d / 2 + 0.06);
       cyl(g, 0.02, y0 - 0.25, M('steel'), 0, 0.25, -it.d / 2 + 0.12);                                   // 트랩 배관
       bx(g, 0.05, 0.05, 0.12, M('steel'), 0, 0.22, -it.d / 2 + 0.06);
@@ -377,9 +396,9 @@ export const BUILDERS = {
       const bar = cyl(g, 0.01, it.w - 0.02, m, 0, 0, 0, { seg: 12 }); bar.rotation.z = Math.PI / 2; bar.position.set(0, y, zb);
       if (it.towel !== false) {              // 반으로 접어 걸린 수건
         const tw = Math.min(0.42, it.w - 0.12), tm = M('towel');
-        bx(g, tw, 0.5, 0.012, tm, 0, y - 0.5, zb + 0.016);
-        bx(g, tw, 0.48, 0.012, tm, 0, y - 0.48, zb - 0.016);
-        bx(g, tw, 0.014, 0.044, tm, 0, y + 0.008, zb);
+        rbx(g, tw, 0.5, 0.014, tm, 0, y - 0.5, zb + 0.016, 0.007);
+        rbx(g, tw, 0.48, 0.014, tm, 0, y - 0.48, zb - 0.016, 0.007);
+        const fold = cyl(g, 0.024, tw, tm, 0, 0, 0, { seg: 16 }); fold.rotation.z = Math.PI / 2; fold.position.set(0, y + 0.004, zb);   // 접힌 부분은 둥글게
       }
     } },
   paperholder: { label: '휴지걸이', parts: { body: 'bath.acc', paper: 'sanitary' }, def: { w: 0.18, d: 0.12, h: 0.12 }, mount: 0.7,
@@ -400,11 +419,16 @@ export const BUILDERS = {
     build(g, it, M) { bx(g, it.w, it.h, it.d, M('body'), 0, 0, 0); bx(g, it.w - 0.03, 0.004, it.d - 0.03, SPECIAL.dark, 0, it.h - 0.003, 0, { cast: false }); } },
   toilet: { label: '양변기', parts: { body: 'sanitary' }, def: { w: 0.4, d: 0.7, h: 0.8 },
     build(g, it, M) {
-      const m = M('body');
-      bx(g, 0.38, 0.4, 0.18, m, 0, 0.38, -it.d / 2 + 0.09);
-      const bowl = cyl(g, 0.19, 0.38, m, 0, 0, it.d / 2 - 0.24); bowl.scale.z = 1.4;
-      bx(g, 0.36, 0.03, 0.46, m, 0, 0.38, it.d / 2 - 0.25);
-      bx(g, 0.1, 0.008, 0.03, P('steel'), 0, 0.78, -it.d / 2 + 0.09, { cast: false });
+      // 실제 양변기 형태: 둥근 물탱크, 아래로 좁아지는 타원 볼(회전체), 타원 시트 + 덮개, 버튼
+      const m = M('body'), zb = it.d / 2 - 0.25;
+      rbx(g, 0.38, 0.4, 0.18, m, 0, 0.38, -it.d / 2 + 0.09, 0.04);
+      rbx(g, 0.34, 0.03, 0.14, m, 0, 0.78, -it.d / 2 + 0.09, 0.012);                                   // 탱크 뚜껑
+      const bowl = lathe(g, [[0.09, 0], [0.13, 0.05], [0.17, 0.16], [0.19, 0.3], [0.195, 0.38], [0.17, 0.39]], m, 0, 0, zb, 36);
+      bowl.scale.z = 1.35;
+      const seat = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.035, 36), m); seat.scale.z = 1.35; seat.position.set(0, 0.4, zb); seat.castShadow = true; g.add(seat);
+      const lid = new THREE.Mesh(new THREE.CylinderGeometry(0.19, 0.19, 0.015, 36), m); lid.scale.z = 1.3; lid.position.set(0, 0.425, zb); g.add(lid);
+      bx(g, 0.36, 0.06, 0.12, m, 0, 0.36, -it.d / 2 + 0.2);                                             // 볼-탱크 연결부
+      bx(g, 0.1, 0.008, 0.03, P('steel'), 0, 0.81, -it.d / 2 + 0.09, { cast: false });
     } },
   shower: { label: '샤워기', parts: { steel: 'steel' }, def: { w: 0.3, d: 0.1, h: 2.1 },
     build(g, it, M) {
@@ -452,9 +476,11 @@ export const BUILDERS = {
     build(g, it, M) { BUILDERS.desk.build(g, it, M); } },      // 하부장과 같은 상판 재질 → ㄱ자로 이어 붙일 때 색이 같다
   chair: { label: '의자', parts: { seat: 'chair', leg: 'steel' }, def: { w: 0.45, d: 0.48, h: 0.9 },
     build(g, it, M) {
-      bx(g, it.w, 0.05, it.d, M('seat'), 0, 0.43, 0);
-      bx(g, it.w, 0.42, 0.04, M('seat'), 0, 0.48, -it.d / 2 + 0.02);
-      for (const [x, z] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) cyl(g, 0.012, 0.43, M('leg'), x * (it.w / 2 - 0.03), 0, z * (it.d / 2 - 0.03));
+      // 둥근 방석 + 살짝 뒤로 기운 곡면 등받이 + 가는 다리
+      rbx(g, it.w, 0.06, it.d, M('seat'), 0, 0.42, 0, 0.03);
+      const back = rbx(g, it.w - 0.04, 0.4, 0.035, M('seat'), 0, 0, 0, 0.018);
+      back.position.set(0, 0.7, -it.d / 2 + 0.04); back.rotation.x = -0.12;
+      for (const [x, z] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) cyl(g, 0.012, 0.42, M('leg'), x * (it.w / 2 - 0.03), 0, z * (it.d / 2 - 0.03), { seg: 10 });
     } },
   table: { label: '식탁', parts: { top: 'wood.desk', leg: 'chair' }, def: { w: 1.4, d: 0.8, h: 0.74 },
     build(g, it, M) {
@@ -496,7 +522,9 @@ export const BUILDERS = {
           const x0 = -w / 2 + t + bw * b + 0.03, y0 = baseH + t + rh * r, fill = 0.35 + rnd() * 0.5;
           let x = x0; const xEnd = x0 + (bw - t - 0.06) * fill;
           while (x < xEnd) { const tw = 0.018 + rnd() * 0.03, th = Math.min(rh - 0.04, 0.17 + rnd() * 0.13);
-            bx(g, tw, th, 0.14 + rnd() * 0.06, BOOK_MATS[Math.floor(rnd() * BOOK_MATS.length)], x + tw / 2, y0, -0.02 + rnd() * 0.02, { cast: false }); x += tw + 0.002; }
+            const bk = rbx(g, tw, th, 0.14 + rnd() * 0.06, BOOK_MATS[Math.floor(rnd() * BOOK_MATS.length)], x + tw / 2, y0, -0.02 + rnd() * 0.02, 0.004, { cast: false, seg: 2 });
+            if (rnd() < 0.12) { bk.rotation.z = -0.12; bk.position.x += 0.012; }   // 가끔 기울어진 책
+            x += tw + 0.002; }
           if (rnd() < 0.3) bx(g, 0.12, 0.1 + rnd() * 0.08, 0.12, BOOK_MATS[Math.floor(rnd() * BOOK_MATS.length)], x0 + bw - t - 0.12, y0, 0, { cast: false });   // 오브제
         }
       }
@@ -512,8 +540,8 @@ export const BUILDERS = {
       const { w, d, h } = it;
       bx(g, w, 0.1, d, M('frame'), 0, h - 0.24, 0);
       for (const [x, z] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) bx(g, 0.05, h - 0.24, 0.05, M('frame'), x * (w / 2 - 0.06), 0, z * (d / 2 - 0.06));
-      bx(g, w - 0.04, 0.12, d - 0.04, M('linen'), 0, h - 0.14, 0);
-      for (const x of [-w / 2 + 0.35, w / 2 - 0.35]) { const b = cyl(g, 0.11, 0.5, M('linen'), x, h - 0.02, -d / 2 + 0.15); b.rotation.z = Math.PI / 2; b.position.y = h + 0.02; }
+      rbx(g, w - 0.04, 0.13, d - 0.04, M('linen'), 0, h - 0.15, 0, 0.05);
+      for (const x of [-w / 2 + 0.35, w / 2 - 0.35]) { const b = cyl(g, 0.11, 0.5, M('linen'), x, h - 0.02, -d / 2 + 0.15, { seg: 20 }); b.rotation.z = Math.PI / 2; b.position.y = h + 0.02; }
     } },
   box: { label: '박스(치수 입력)', parts: { body: 'wardrobe' }, def: { w: 0.6, d: 0.6, h: 0.6 },
     build(g, it, M) { bx(g, it.w, it.h, it.d, M('body'), 0, 0, 0); } },
