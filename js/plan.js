@@ -104,7 +104,7 @@ export const ROOMS = [
 // hinge/end: mm · open: 여닫힌 각도(도, 부호로 방향) · kind: door | front | glass
 // 규칙: 방문은 모두 방 안쪽으로 열린다(중문·현관문·발코니 문 제외). 문짝 방향 = (cos θ, −sin θ), θ = atan2(−dz, dx) + open
 export const DOORS = [
-  { hinge: [5200, 3650], end: [5200, 4450], open: -80, kind: 'door', label: '안방 문' },      // 북쪽 힌지, 안방 안쪽(서)으로 열림
+  { hinge: [5200, 4450], end: [5200, 3650], open: 70, kind: 'door', label: '안방 문' },       // 남쪽 힌지, 안방 안쪽(서)으로 70° (남벽에 붙지 않게)
   { hinge: [5200, 1300], end: [5200, 400], open: -88, kind: 'door', label: '안방욕실 문' },     // 활짝 열림
   { hinge: [6100, 3300], end: [5300, 3300], open: -88, kind: 'door', label: '공용욕실 문' },    // 활짝 열림
   { hinge: [7900, 3300], end: [8700, 3300], open: 90, kind: 'door', label: '작은방 문' },      // 서쪽 힌지, 방 안쪽으로 활짝
