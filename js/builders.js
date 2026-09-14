@@ -45,7 +45,7 @@ export function lathe(parent, profile, mat, x = 0, y = 0, z = 0, seg = 32) {
 // 실제 거울: 환경맵(가짜 스튜디오 조명)이 아니라 씬을 거울 시점에서 다시 그려 비춘다 → 그 방에서 실제로 보이는 등·가구만 비친다.
 // 평면(w × h)이 +z 를 향한다. 중심 (x, y+h/2, z).
 export function mirror(parent, w, h, x, y, z) {
-  const m = new Reflector(new THREE.PlaneGeometry(w, h), { clipBias: 0.003, textureWidth: 768, textureHeight: 768, color: 0xdadada });
+  const m = new Reflector(new THREE.PlaneGeometry(w, h), { clipBias: 0.003, textureWidth: 384, textureHeight: 384, color: 0xdadada });   // 저해상도(부하 절감)
   m.position.set(x, y + h / 2, z);
   m.userData.mirror = true;
   parent.add(m); return m;
@@ -524,7 +524,7 @@ export const BUILDERS = {
       bx(g, w, h - baseH, 0.012, m, 0, baseH, -d / 2 + 0.006);                                     // 뒤판
       for (let i = 0; i <= bays; i++) bx(g, t, h - baseH, d, m, -w / 2 + t / 2 + (w - t) * i / bays, baseH, 0);
       for (let r = 0; r <= rows; r++) bx(g, w, t, d, m, 0, baseH + (h - baseH - t) * r / rows, 0);
-      if (it.books !== false) {                                                                   // 장식 책
+      if (it.books === true) {                                                                    // 장식 책(기본 없음 — 부하 절감, books: true 로 켬)
         let seed = 7; const rnd = () => (seed = (seed * 9301 + 49297) % 233280) / 233280;
         const bw = (w - t) / bays, rh = (h - baseH - t) / rows;
         for (let b = 0; b < bays; b++) for (let r = 0; r < rows; r++) {
