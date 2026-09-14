@@ -48,7 +48,7 @@ export function lathe(parent, profile, mat, x = 0, y = 0, z = 0, seg = 32) {
 // 가까이(app 의 MIRROR_RANGE)에서만 실제 반사(Reflector)를 그리고, 멀면 회색 유광면(fallback)으로 대체한다.
 const MIRROR_FALLBACK = new THREE.MeshStandardMaterial({ color: '#b9bcc0', metalness: 0.9, roughness: 0.12, envMapIntensity: 1.0 });
 export function mirror(parent, w, h, x, y, z) {
-  const m = new Reflector(new THREE.PlaneGeometry(w, h), { clipBias: 0.003, textureWidth: 384, textureHeight: 384, color: 0xdadada });   // 저해상도(부하 절감)
+  const m = new Reflector(new THREE.PlaneGeometry(w, h), { clipBias: 0.003, textureWidth: 192, textureHeight: 192, color: 0xdadada });   // 저해상도 192² (부하 절감 — 화질보다 성능)
   m.position.set(x, y + h / 2, z);
   m.userData.mirror = true;
   const fb = new THREE.Mesh(new THREE.PlaneGeometry(w, h), MIRROR_FALLBACK);
