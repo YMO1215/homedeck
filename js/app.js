@@ -277,9 +277,11 @@ const WALL_RECTS = (() => {
     for (const [s0, s1] of gaps) { if (s0 > cur) spans.push([cur, s0]); cur = s1; }
     if (L > cur) spans.push([cur, L]);
     const ax = mx(w.a[0]), az = mz(w.a[1]), sx = Math.sign(w.b[0] - w.a[0]), sz = Math.sign(w.b[1] - w.a[1]);
+    const W = Math.round(BOUNDS.w / S), D = Math.round(BOUNDS.d / S);   // 외벽: 양 끝점이 집 외곽선 위에 있는 벽
+    const outer = (w.a[0] === w.b[0] && (w.a[0] === 0 || w.a[0] === W)) || (w.a[1] === w.b[1] && (w.a[1] === 0 || w.a[1] === D));
     for (const [s0, s1] of spans) {
-      if (vert) { const z0 = az + sz * s0, z1 = az + sz * s1; out.push({ x0: ax - t, x1: ax + t, z0: Math.min(z0, z1), z1: Math.max(z0, z1) }); }
-      else { const x0 = ax + sx * s0, x1 = ax + sx * s1; out.push({ x0: Math.min(x0, x1), x1: Math.max(x0, x1), z0: az - t, z1: az + t }); }
+      if (vert) { const z0 = az + sz * s0, z1 = az + sz * s1; out.push({ x0: ax - t, x1: ax + t, z0: Math.min(z0, z1), z1: Math.max(z0, z1), outer }); }
+      else { const x0 = ax + sx * s0, x1 = ax + sx * s1; out.push({ x0: Math.min(x0, x1), x1: Math.max(x0, x1), z0: az - t, z1: az + t, outer }); }
     }
   }
   return out;
@@ -555,6 +557,16 @@ function updateCulling() {
     if (o.visible !== near) { o.visible = near; o.userData.fallback.visible = !near; invalidate(); }
   });
 }
+// 걷기 충돌: 외벽(창 포함)은 못 지나가고 현관문 개구는 통과. 내벽은 통과 가능(문이 닫힌 방도 들여다볼 수 있게)
+const WALKER_R = 0.25, OUTER_RECTS = WALL_RECTS.filter(r => r.outer);
+function clampWalker() {
+  const p = camera.position;
+  for (let pass = 0; pass < 2; pass++) for (const r of OUTER_RECTS) {
+    const ox = Math.min(p.x + WALKER_R, r.x1) - Math.max(p.x - WALKER_R, r.x0), oz = Math.min(p.z + WALKER_R, r.z1) - Math.max(p.z - WALKER_R, r.z0);
+    if (ox <= 0 || oz <= 0) continue;
+    if (ox < oz) p.x += p.x < (r.x0 + r.x1) / 2 ? -ox : ox; else p.z += p.z < (r.z0 + r.z1) / 2 ? -oz : oz;
+  }
+}
 const clock = new THREE.Clock();
 function tick() {
   const dt = Math.min(clock.getDelta(), 0.05);
@@ -568,6 +580,7 @@ function tick() {
     if (keys.has('KeyA') || keys.has('ArrowLeft')) walk.moveRight(-sp);
     if (keys.has('KeyD') || keys.has('ArrowRight')) walk.moveRight(sp);
     camera.position.y = 1.5;
+    clampWalker();
     updateSensors(dt);
     moving = keys.size > 0;
   } else if (!walking) moving = orbit.update();   // 감쇠 중이면 true (걷기 진입 중엔 orbit 이 시선을 건드리지 않게)
