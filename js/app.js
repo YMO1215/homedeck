@@ -2,11 +2,11 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { H, mx, mz, CENTER, BOUNDS, VIEWS, DEFAULT_ITEMS, PLAN_VERSION } from './plan.js';
+import { H, S, mx, mz, CENTER, BOUNDS, VIEWS, DEFAULT_ITEMS, PLAN_VERSION, WALLS } from './plan.js';
 import { PAINTS, DEFAULT_PAINTS, updatePaint, getMaterial } from './materials.js';
 import { FINISHES } from './textures.js';
 import { SCHEMES } from './schemes.js';
-import { buildWalls, buildFloors, buildDoors, buildFixtures, buildExterior, buildItem, BUILDERS, CATALOG, CATALOG_LIGHTS, KELVIN_OPTIONS } from './builders.js';
+import { buildWalls, buildFloors, buildDoors, buildFixtures, buildItem, BUILDERS, CATALOG, CATALOG_LIGHTS, KELVIN_OPTIONS, wattOf } from './builders.js';
 
 const SAVE_KEY = 'homedeck.v1';
 const $ = (s) => document.querySelector(s);
@@ -26,13 +26,21 @@ function applySaved(s) {
   // 평면 좌표계가 바뀐 저장본이면 가구 배치는 기본값으로, 색·마감만 이어받는다
   state.items = s.plan === PLAN_VERSION ? s.items : JSON.parse(JSON.stringify(DEFAULT_ITEMS));
   if (s.plan !== PLAN_VERSION) setTimeout(() => flash('평면·조명 구성이 바뀌어 배치를 기본값으로 되돌렸습니다(색은 유지)'), 800);
-  state.exposure = s.exposure ?? 1.0; state.sun = s.sun ?? 1.0; state.lamp = s.lamp ?? 1.0; state.scheme = s.scheme || 'base';
-  for (const k of Object.keys(PAINTS)) if (s.paints && s.paints[k]) updatePaint(k, s.paints[k]);
+  state.exposure = s.exposure ?? 1.0; state.sun = s.sun ?? 1.0; state.lamp = Math.min(1, s.lamp ?? 1.0); state.scheme = s.scheme || 'base';
+  for (const it of s.items || []) if (it.pw > 1) it.pw = 1;   // 조광은 정격(100%)을 넘지 않는다 — 옛 저장본 보정
+  // pv 2 부터는 기본값과 다른 페인트만 저장 → 코드의 새 기본 색이 옛 저장본에 덮이지 않는다.
+  // 옛 형식(pv 없음)은 모든 키에 당시 기본값이 들어 있어 구분이 안 되므로 색을 이어받지 않는다.
+  if (s.pv === 2) { for (const k of Object.keys(PAINTS)) if (s.paints && s.paints[k]) updatePaint(k, s.paints[k]); }
+  else if (s.paints) setTimeout(() => flash('저장 형식이 바뀌어 색·마감을 기본값으로 되돌렸습니다'), 1600);
 }
+const PAINT_FIELDS = ['color', 'finish', 'rough', 'metal'];
 function serialize() {
   const paints = {};
-  for (const k of Object.keys(PAINTS)) { const { color, finish, rough, metal } = PAINTS[k]; paints[k] = { color, finish, rough, metal }; }
-  return { v: 1, plan: PLAN_VERSION, items: state.items, paints, exposure: state.exposure, sun: state.sun, lamp: state.lamp, scheme: state.scheme, savedAt: new Date().toISOString() };
+  for (const k of Object.keys(PAINTS)) {
+    const p = PAINTS[k], d = DEFAULT_PAINTS[k];
+    if (PAINT_FIELDS.some(f => p[f] !== d[f])) { paints[k] = {}; for (const f of PAINT_FIELDS) paints[k][f] = p[f]; }
+  }
+  return { v: 1, pv: 2, plan: PLAN_VERSION, items: state.items, paints, exposure: state.exposure, sun: state.sun, lamp: state.lamp, scheme: state.scheme, savedAt: new Date().toISOString() };
 }
 let saveTimer = 0;
 function save() {
@@ -46,15 +54,15 @@ function flash(msg) {
 
 // ── 씬 ─────────────────────────────────────────────────────────
 const canvas = $('#c');
+// 부하 절감: 픽셀비 1.5 상한 · 가벼운 PCF 그림자(1024) · 외부 지형/건물 없음 · 화면이 바뀔 때만 렌더(아래 dirty)
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
-renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color('#cfd8e3');
-scene.fog = new THREE.Fog('#cfd8e3', 40, 90);
 scene.environment = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(), 0.04).texture;
 
 const camera = new THREE.PerspectiveCamera(62, 1, 0.05, 200);
@@ -66,12 +74,11 @@ const walk = new PointerLockControls(camera, document.body);
 const hemi = new THREE.HemisphereLight('#e8eef5', '#6b675f', 0.55); scene.add(hemi);
 const sun = new THREE.DirectionalLight('#fff3e0', 2.2);
 sun.position.set(CENTER.x - 14, 12, CENTER.z + 9); sun.target.position.set(CENTER.x, 0, CENTER.z);
-sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048);
+sun.castShadow = true; sun.shadow.mapSize.set(1024, 1024);
 Object.assign(sun.shadow.camera, { left: -9, right: 9, top: 9, bottom: -9, near: 1, far: 50 });
 sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.02;
 scene.add(sun, sun.target);
 
-buildExterior(scene);
 buildWalls(scene);
 buildFloors(scene);
 buildDoors(scene);
@@ -115,7 +122,7 @@ function setView(v) {
 const viewSel = $('#view');
 for (const v of VIEWS) { const o = document.createElement('option'); o.value = v.id; o.textContent = v.label; viewSel.appendChild(o); }
 viewSel.onchange = () => setView(VIEWS.find(v => v.id === viewSel.value));
-setView(VIEWS[0]);
+{ const top = VIEWS.find(v => v.id === 'top') || VIEWS[0]; setView(top); viewSel.value = top.id; }   // 시작은 탑뷰
 
 // 걷기 모드
 const keys = new Set();
@@ -181,10 +188,58 @@ canvas.addEventListener('pointermove', ev => {
   ray.setFromCamera(ptr, camera);
   const p = new THREE.Vector3();
   if (!ray.ray.intersectPlane(floorPlane, p)) return;
-  drag.it.x = +(p.x + drag.ox).toFixed(3); drag.it.z = +(p.z + drag.oz).toFixed(3); drag.moved = true;
+  const q = resolveWalls(drag.it, p.x + drag.ox, p.z + drag.oz);
+  drag.it.x = +q.x.toFixed(3); drag.it.z = +q.z.toFixed(3); drag.moved = true;
   const g = objs.get(drag.it.id); g.position.set(drag.it.x, 0, drag.it.z);
   refreshHelper(); fillItemFields(drag.it);
 });
+
+// ── 벽 충돌 · 자석 스냅 ────────────────────────────────────────
+// 축에 나란한 벽 구간(문·개구는 제외, 창은 벽으로 취급)을 사각형으로 두고, 드래그 중인 가구의 발자국(회전 반영 AABB)이
+// 벽을 파고들면 밀어내고, 벽 면에서 SNAP 안쪽이면 면에 딱 붙인다.
+const SNAP = 0.15;
+const WALL_RECTS = (() => {
+  const out = [];
+  for (const w of WALLS) {
+    const vert = w.a[0] === w.b[0], horz = w.a[1] === w.b[1];
+    if (!vert && !horz) continue;                                  // 사선 벽(중문)은 제외
+    const L = Math.hypot(w.b[0] - w.a[0], w.b[1] - w.a[1]) * S, t = w.t * S / 2;
+    const gaps = (w.gaps || []).filter(g => g.kind !== 'window').map(g => [g.from * S, g.to * S]).sort((a, b) => a[0] - b[0]);
+    let cur = 0; const spans = [];
+    for (const [s0, s1] of gaps) { if (s0 > cur) spans.push([cur, s0]); cur = s1; }
+    if (L > cur) spans.push([cur, L]);
+    const ax = mx(w.a[0]), az = mz(w.a[1]), sx = Math.sign(w.b[0] - w.a[0]), sz = Math.sign(w.b[1] - w.a[1]);
+    for (const [s0, s1] of spans) {
+      if (vert) { const z0 = az + sz * s0, z1 = az + sz * s1; out.push({ x0: ax - t, x1: ax + t, z0: Math.min(z0, z1), z1: Math.max(z0, z1) }); }
+      else { const x0 = ax + sx * s0, x1 = ax + sx * s1; out.push({ x0: Math.min(x0, x1), x1: Math.max(x0, x1), z0: az - t, z1: az + t }); }
+    }
+  }
+  return out;
+})();
+function halfExtents(it) {
+  const a = THREE.MathUtils.degToRad(it.rot || 0), c = Math.abs(Math.cos(a)), s = Math.abs(Math.sin(a));
+  return { hx: (it.w / 2) * c + (it.d / 2) * s, hz: (it.w / 2) * s + (it.d / 2) * c };
+}
+function resolveWalls(it, x, z) {
+  const { hx, hz } = halfExtents(it);
+  for (let pass = 0; pass < 2; pass++) for (const r of WALL_RECTS) {            // 1) 파고든 벽에서 밀어내기
+    const ox = Math.min(x + hx, r.x1) - Math.max(x - hx, r.x0), oz = Math.min(z + hz, r.z1) - Math.max(z - hz, r.z0);
+    if (ox <= 0 || oz <= 0) continue;
+    if (ox < oz) x += x < (r.x0 + r.x1) / 2 ? -ox : ox; else z += z < (r.z0 + r.z1) / 2 ? -oz : oz;
+  }
+  let snx = null, snz = null;                                                     // 2) 가장 가까운 벽 면에 스냅
+  for (const r of WALL_RECTS) {
+    const ox = Math.min(x + hx, r.x1) - Math.max(x - hx, r.x0), oz = Math.min(z + hz, r.z1) - Math.max(z - hz, r.z0);
+    if (oz > 0.05) { const g1 = r.x0 - (x + hx), g2 = (x - hx) - r.x1;
+      if (g1 >= 0 && g1 < SNAP && (snx === null || g1 < Math.abs(snx))) snx = g1;
+      if (g2 >= 0 && g2 < SNAP && (snx === null || g2 < Math.abs(snx))) snx = -g2; }
+    if (ox > 0.05) { const g1 = r.z0 - (z + hz), g2 = (z - hz) - r.z1;
+      if (g1 >= 0 && g1 < SNAP && (snz === null || g1 < Math.abs(snz))) snz = g1;
+      if (g2 >= 0 && g2 < SNAP && (snz === null || g2 < Math.abs(snz))) snz = -g2; }
+  }
+  if (snx !== null) x += snx; if (snz !== null) z += snz;
+  return { x, z };
+}
 addEventListener('pointerup', () => { if (drag) { if (drag.moved) save(); drag = null; orbit.enabled = !walk.isLocked; } });
 
 addEventListener('keydown', e => {
@@ -221,20 +276,33 @@ function showItemPanel(it) {
     parts.appendChild(row);
   }
   const L = $('#ip-light'); L.hidden = !B.light;
-  if (B.light) { $('#ip-lit').checked = it.lit !== false; $('#ip-pw').value = it.pw ?? 1; $('#ip-kelvin').value = String(it.kelvin || 3000); }
-  $('#ip-dims').textContent = B.light ? (it.type === 'downlight' ? '폭 = 트림 지름' : '높이 = 천장에서 내려오는 길이') : '';
+  if (B.light) { $('#ip-lit').checked = it.lit !== false; $('#ip-pw').value = it.pw ?? 1; $('#ip-kelvin').value = String(it.kelvin || 3000); $('#ip-watt').value = wattOf(B, it); }
+  $('#ip-dims').textContent = B.light ? `${wattOf(B, it)} W ≈ ${wattOf(B, it) * 100} lm · ` + (it.type === 'downlight' ? '폭 = 트림 지름' : '높이 = 천장에서 내려오는 길이') : B.ceiling ? '천장 부착 — 폭·깊이로 패널 크기 조절' : '';
   fillItemFields(it);
 }
 $('#ip-lit').onchange = (e) => { const it = selected?.item; if (!it) return; it.lit = e.target.checked; rebuildItem(it); };
 $('#ip-pw').oninput = (e) => { const it = selected?.item; if (!it) return; it.pw = +e.target.value; applyLamp(objs.get(it.id), it); };
 $('#ip-pw').onchange = () => { const it = selected?.item; if (it) rebuildItem(it); };
-$('#ip-kelvin').onchange = (e) => { const it = selected?.item; if (!it) return; it.kelvin = +e.target.value; it.kelvin_user = true; rebuildItem(it); };
-for (const k of KELVIN_OPTIONS) { const o = document.createElement('option'); o.value = k; o.textContent = k + 'K'; $('#ip-kelvin').appendChild(o); }
+$('#ip-kelvin').onchange = (e) => { const it = selected?.item; if (!it) return; it.kelvin = +e.target.value; it.kelvin_user = true; rebuildItem(it); $('#kelvin-all').value = ''; };
+$('#ip-watt').onchange = (e) => { const it = selected?.item; if (!it) return; const w = +e.target.value; if (w > 0) it.watt = w; else delete it.watt; rebuildItem(it); showItemPanel(it); };
+for (const k of KELVIN_OPTIONS) {
+  for (const sel of ['#ip-kelvin', '#kelvin-all']) { const o = document.createElement('option'); o.value = k; o.textContent = k + 'K'; $(sel).appendChild(o); }
+}
+// 전체 색온도: 모든 등의 kelvin 을 한 번에. 이후 스킴이 바꾸지 않도록 kelvin_user 표시
+$('#kelvin-all').onchange = (e) => {
+  const k = +e.target.value; if (!k) return;
+  for (const it of state.items) if (BUILDERS[it.type]?.light) { it.kelvin = k; it.kelvin_user = true; }
+  mountAll(); if (selected?.item) selectItem(selected.item); save(); flash(`전체 색온도 ${k}K`);
+};
 function fillItemFields(it) {
   if (IP.hidden) return;
   $('#ip-lock').checked = !!it.locked;
   for (const k of ['x', 'z', 'rot', 'w', 'd', 'h']) $('#ip-' + k).value = it[k];
+  const B = BUILDERS[it.type];                                   // 벽부착품: 설치 높이(y0)
+  $('#ip-y0-row').hidden = !B.mount;
+  if (B.mount) $('#ip-y0').value = it.y0 ?? B.mount;
 }
+$('#ip-y0').onchange = (e) => { const it = selected?.item; if (!it) return; it.y0 = +e.target.value; rebuildItem(it); };
 $('#ip-lock').onchange = (e) => { if (selected?.item) { selected.item.locked = e.target.checked; save(); } };
 for (const k of ['x', 'z', 'rot', 'w', 'd', 'h']) $('#ip-' + k).onchange = (e) => {
   const it = selected?.item; if (!it) return;
@@ -316,15 +384,17 @@ function applyScheme(id, { quiet } = {}) {
   // 1) 색·마감: 기본값 위에 스킴 패치
   for (const k of Object.keys(PAINTS)) updatePaint(k, { ...DEFAULT_PAINTS[k], rough: undefined, metal: undefined, ...(sc.paints[k] || {}) });
   document.querySelectorAll('.prow').forEach(r => syncPaintRows(r.dataset.key));
-  // 2) 거실 구성: zone:'living' 태그(또는 옛 저장본의 소파·TV장·스툴)만 교체, 다른 방은 그대로
-  state.items = state.items.filter(it => !(it.zone === 'living' || (it.builtin && LIVING_DEFAULT_TYPES.includes(it.type))));
-  const living = sc.living ? sc.living : DEFAULT_ITEMS.filter(it => it.zone === 'living');
-  state.items.push(...JSON.parse(JSON.stringify(living)));
+  // 2) 거실 구성: 스킴이 자기 거실 세트(living)를 가진 경우에만 zone:'living' 아이템을 교체.
+  //    living: null 이면 가구 배치·형태는 손대지 않고 색·마감만 바뀐다(현재 모든 스킴).
+  if (sc.living) {
+    state.items = state.items.filter(it => !(it.zone === 'living' || (it.builtin && LIVING_DEFAULT_TYPES.includes(it.type))));
+    state.items.push(...JSON.parse(JSON.stringify(sc.living)));
+  }
   // 3) 조명 색온도
   if (sc.kelvin) for (const it of state.items) if (BUILDERS[it.type]?.light && !it.kelvin_user) it.kelvin = sc.kelvin;
   state.scheme = id;
   mountAll(); deselect(); markScheme(); save();
-  if (!quiet) { setView(VIEWS.find(v => v.id === 'living_win')); viewSel.value = 'living_win'; flash(`디자인: ${sc.label}`); }
+  if (!quiet) flash(`디자인: ${sc.label}`);   // 시점은 그대로 — 보고 있던 화면에서 색·마감만 바뀐다
 }
 function markScheme() { document.querySelectorAll('.scheme').forEach(c => c.classList.toggle('on', c.dataset.id === state.scheme)); }
 {
@@ -363,14 +433,15 @@ $('#file-import').onchange = async (e) => {
   catch { flash('파일 형식이 맞지 않습니다'); }
   e.target.value = '';
 };
+// ↺ 원본: plan.js 의 DEFAULT_ITEMS · materials.js 의 DEFAULT_PAINTS 가 "원본 구조". 언제든 여기로 되돌린다.
 $('#btn-reset').onclick = () => {
-  if (!confirm('배치와 색을 모두 처음 상태로 되돌릴까요?')) return;
+  if (!confirm('배치·색·밝기를 모두 원본 구조로 되돌릴까요? (현재 수정 내용은 사라집니다 — 남기려면 먼저 내보내기)')) return;
   localStorage.removeItem(SAVE_KEY);
   for (const k of Object.keys(PAINTS)) updatePaint(k, { ...DEFAULT_PAINTS[k] });
   state.items = JSON.parse(JSON.stringify(DEFAULT_ITEMS)); state.exposure = 1; state.sun = 1; state.lamp = 1;
   renderer.toneMappingExposure = 1; sun.intensity = 2.2; $('#exposure').value = 1; $('#sunlight').value = 1; $('#lamp').value = 1;
   state.scheme = 'base'; markScheme();
-  mountAll(); deselect(); document.querySelectorAll('.prow').forEach(r => syncPaintRows(r.dataset.key)); flash('초기화');
+  mountAll(); deselect(); document.querySelectorAll('.prow').forEach(r => syncPaintRows(r.dataset.key)); flash('원본 구조로 되돌렸습니다');
 };
 $('#btn-shot').onclick = () => {
   renderer.render(scene, camera);
@@ -378,16 +449,26 @@ $('#btn-shot').onclick = () => {
 };
 
 // ── 루프 ───────────────────────────────────────────────────────
+// 화면이 바뀔 이유(입력·카메라·리사이즈)가 있을 때만 그린다. 가만히 있으면 GPU 를 거의 쓰지 않는다.
+let dirty = 3;
+const invalidate = () => { dirty = 3; };
+for (const ev of ['pointerdown', 'pointermove', 'pointerup', 'wheel', 'keydown', 'keyup', 'input', 'change', 'click'])
+  addEventListener(ev, invalidate, { capture: true, passive: true });
+addEventListener('resize', invalidate);
+orbit.addEventListener('change', invalidate);
+walk.addEventListener('change', invalidate);
+
 function resize() {
   const w = canvas.clientWidth, h = canvas.clientHeight;
   if (canvas.width !== Math.floor(w * renderer.getPixelRatio()) || canvas.height !== Math.floor(h * renderer.getPixelRatio())) {
-    renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix();
+    renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); invalidate();
   }
 }
 const clock = new THREE.Clock();
 function tick() {
   const dt = Math.min(clock.getDelta(), 0.05);
   resize();
+  let moving = false;
   if (walk.isLocked) {
     const sp = (keys.has('ShiftLeft') ? 3.2 : 1.6) * dt;
     if (keys.has('KeyW') || keys.has('ArrowUp')) walk.moveForward(sp);
@@ -395,8 +476,9 @@ function tick() {
     if (keys.has('KeyA') || keys.has('ArrowLeft')) walk.moveRight(-sp);
     if (keys.has('KeyD') || keys.has('ArrowRight')) walk.moveRight(sp);
     camera.position.y = 1.5;
-  } else orbit.update();
-  renderer.render(scene, camera);
+    moving = keys.size > 0;
+  } else moving = orbit.update();          // 감쇠 중이면 true
+  if (moving || drag || dirty > 0) { renderer.render(scene, camera); if (dirty > 0) dirty--; }
   requestAnimationFrame(tick);
 }
 tick();

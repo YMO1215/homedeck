@@ -26,7 +26,7 @@ const GEN = {
     const c = cv(size), x = c.getContext('2d');
     x.fillStyle = '#e6e6e6'; x.fillRect(0, 0, size, size);
     noise(x, size, 26, 3);
-    x.strokeStyle = '#5a5a5a'; x.lineWidth = size * 0.012;
+    x.strokeStyle = '#7d7a75'; x.lineWidth = size * 0.007;   // 줄눈: 가늘고 톤 다운(대형 포세린 느낌)
     x.strokeRect(0, 0, size, size);
     return c;
   },
@@ -36,18 +36,18 @@ const GEN = {
     const pw = size / 8;
     for (let p = 0; p < 8; p++) {
       const off = (p * 0.37 * size) % size;
-      x.fillStyle = `rgba(0,0,0,${(Math.random() * 0.08).toFixed(3)})`;
+      x.fillStyle = `rgba(0,0,0,${(Math.random() * 0.06).toFixed(3)})`;
       x.fillRect(p * pw, 0, pw, size);
-      for (let g = 0; g < 26; g++) {        // 결
-        x.strokeStyle = `rgba(90,60,30,${(0.08 + Math.random() * 0.12).toFixed(3)})`;
-        x.lineWidth = 1 + Math.random() * 1.5;
+      for (let g = 0; g < 22; g++) {        // 결 — 약하게(오일 마감 오크처럼 결이 은은하게 보이는 정도)
+        x.strokeStyle = `rgba(90,60,30,${(0.04 + Math.random() * 0.07).toFixed(3)})`;
+        x.lineWidth = 0.8 + Math.random() * 1.2;
         x.beginPath();
         const gx = p * pw + Math.random() * pw;
         x.moveTo(gx, 0);
         x.bezierCurveTo(gx + 6, size * 0.3, gx - 6, size * 0.6, gx + 3, size);
         x.stroke();
       }
-      x.strokeStyle = 'rgba(40,25,10,0.55)'; x.lineWidth = 2;
+      x.strokeStyle = 'rgba(40,25,10,0.3)'; x.lineWidth = 1.5;   // 판 이음새 톤 다운
       x.beginPath(); x.moveTo(p * pw, 0); x.lineTo(p * pw, size); x.stroke();
       x.beginPath(); x.moveTo(p * pw, off); x.lineTo((p + 1) * pw, off); x.stroke();
     }
@@ -130,14 +130,15 @@ export function texture(kind, sizeX = 1, sizeY = sizeX) {
 }
 
 // 마감 프리셋: 패턴 1유닛의 실제 크기(m)·거칠기·범프
+// env: 환경맵 반사 세기 — 유광·타일·대리석은 조명이 면에 비치도록 높게
 export const FINISHES = {
-  plain:     { label: '무광',      size: null, rough: 0.6,  bump: 0 },
-  gloss:     { label: '유광',      size: null, rough: 0.15, bump: 0 },
-  wallpaper: { label: '벽지',      size: 0.5,  rough: 0.9,  bump: 0.004 },
-  tile:      { label: '타일 600',  size: 0.6,  rough: 0.35, bump: 0.012 },
-  tile30:    { label: '타일 300',  size: 0.3,  rough: 0.35, bump: 0.012, kind: 'tile' },
-  wood:      { label: '원목 마루', size: 1.0,  rough: 0.5,  bump: 0.006 },
-  concrete:  { label: '콘크리트',  size: 1.5,  rough: 0.85, bump: 0.01 },
-  marble:    { label: '대리석',    size: 1.2,  rough: 0.18, bump: 0.002 },
-  fabric:    { label: '패브릭',    size: 0.3,  rough: 1.0,  bump: 0.006 },
+  plain:     { label: '무광',      size: null, rough: 0.6,  bump: 0,     env: 0.5 },
+  gloss:     { label: '유광',      size: null, rough: 0.12, bump: 0,     env: 1.1 },
+  wallpaper: { label: '벽지',      size: 0.5,  rough: 0.9,  bump: 0.004, env: 0.3 },
+  tile:      { label: '타일 600',  size: 0.6,  rough: 0.28, bump: 0.012, env: 0.9 },
+  tile30:    { label: '타일 300',  size: 0.3,  rough: 0.3,  bump: 0.012, env: 0.85, kind: 'tile' },
+  wood:      { label: '원목 마루', size: 1.0,  rough: 0.45, bump: 0.006, env: 0.5 },
+  concrete:  { label: '콘크리트',  size: 1.5,  rough: 0.85, bump: 0.01,  env: 0.35 },
+  marble:    { label: '대리석',    size: 1.2,  rough: 0.15, bump: 0.002, env: 1.0 },
+  fabric:    { label: '패브릭',    size: 0.3,  rough: 1.0,  bump: 0.006, env: 0.2 },
 };

@@ -5,9 +5,9 @@ import { texture, baseTexture, FINISHES } from './textures.js';
 // key → { label, group, color, finish, sizeY?, metal? }
 export const PAINTS = {
   'wall':           { label: '벽',              group: '건축', color: '#f1efe9', finish: 'wallpaper' },
-  'wall.bath':      { label: '욕실 벽 타일',    group: '건축', color: '#e3ddcf', finish: 'tile', sizeY: 0.3 },
+  'wall.bath':      { label: '욕실 벽 타일',    group: '건축', color: '#e6e1d6', finish: 'tile', sizeY: 0.6 },   // 600×600 대형 타일
   'ceiling':        { label: '천장',            group: '건축', color: '#dedede', finish: 'plain' },
-  'ceiling.bath':   { label: '욕실 천장',       group: '건축', color: '#e8e8e8', finish: 'plain' },
+  'ceiling.bath':   { label: '욕실 천장',       group: '건축', color: '#4a4a4c', finish: 'plain', rough: 0.6 },   // 다크 그레이 천장
   'floor.main':     { label: '거실·주방 바닥',  group: '바닥', color: '#4d4d4f', finish: 'tile' },
   'floor.bedroom':  { label: '안방 바닥',       group: '바닥', color: '#4d4d4f', finish: 'tile' },
   'floor.small':    { label: '작은방 바닥',     group: '바닥', color: '#55555a', finish: 'tile' },
@@ -27,7 +27,7 @@ export const PAINTS = {
   'bed.frame':      { label: '침대 프레임',     group: '가구', color: '#a88a6a', finish: 'wood' },
   'bed.linen':      { label: '침구',            group: '가구', color: '#f7f7f7', finish: 'fabric' },
   'study.cabinet':  { label: '서재 수납장',     group: '가구', color: '#f4f4f4', finish: 'plain', rough: 0.4 },
-  'study.top':      { label: '서재 상판',       group: '가구', color: '#4a4a4a', finish: 'plain', rough: 0.35 },
+  'study.top':      { label: '서재 상판(블랙)', group: '가구', color: '#1e1e1e', finish: 'plain', rough: 0.5 },   // 책상·하부장·침대 선반 상판 공용 — 검은 단색
   'shoe':           { label: '신발장',          group: '가구', color: '#4b4b4b', finish: 'plain', rough: 0.45 },
   'wood.desk':      { label: '책상·테이블',     group: '가구', color: '#b99a78', finish: 'wood' },
   'door':           { label: '방문',            group: '건축', color: '#f0f0f0', finish: 'plain', rough: 0.5 },
@@ -35,6 +35,9 @@ export const PAINTS = {
   'frame.black':    { label: '중문·창 프레임(흑)', group: '건축', color: '#1c1c1c', finish: 'gloss', metal: 0.6 },
   'frame.white':    { label: '창틀(백)',        group: '건축', color: '#f4f4f4', finish: 'plain', rough: 0.4 },
   'sanitary':       { label: '도기(변기·세면대)', group: '욕실', color: '#ffffff', finish: 'gloss' },
+  'bath.acc':       { label: '욕실 액세서리(블랙)', group: '욕실', color: '#2a2a2a', finish: 'gloss', metal: 0.5, rough: 0.35 },
+  'bath.ledge':     { label: '욕실 젠다이',     group: '욕실', color: '#3b3b3b', finish: 'plain', rough: 0.3 },
+  'towel':          { label: '수건',            group: '욕실', color: '#efe9dc', finish: 'fabric' },
   'washer':         { label: '세탁기',          group: '가전', color: '#f2f2f2', finish: 'gloss', rough: 0.3 },
   'fridge':         { label: '냉장고',          group: '가전', color: '#e9e9e9', finish: 'gloss', rough: 0.3 },
   'plant':          { label: '식물',            group: '가구', color: '#3f7d3a', finish: 'fabric' },
@@ -55,6 +58,7 @@ function apply(m, p) {
   m.color.set(p.color);
   m.roughness = p.rough ?? f.rough;
   m.metalness = p.metal ?? 0;
+  m.envMapIntensity = f.env ?? 0.5;
   if (f.size) {
     m.map = texture(kind, f.size, p.sizeY || f.size);
     m.bumpMap = m.map; m.bumpScale = f.bump;

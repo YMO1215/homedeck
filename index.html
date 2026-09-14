@@ -22,12 +22,13 @@
   <button id="btn-walk" title="마우스로 둘러보고 WASD 로 걷기 · Esc 로 나가기">🚶 걷기</button>
   <label title="화면 밝기">밝기 <input id="exposure" type="range" min="0.4" max="2" step="0.05" value="1"></label>
   <label title="창으로 들어오는 햇빛">햇빛 <input id="sunlight" type="range" min="0" max="2" step="0.1" value="1"></label>
-  <label title="실내 조명 전체 세기">조명 <input id="lamp" type="range" min="0" max="2" step="0.1" value="1"></label>
+  <label title="실내 조명 전체 조광 — 100% = 각 등의 정격 밝기">조명 <input id="lamp" type="range" min="0" max="1" step="0.05" value="1"></label>
+  <label title="모든 등의 색온도를 한 번에 바꾸기">색온도 <select id="kelvin-all"><option value="">개별</option></select></label>
   <span class="sp"></span>
   <button id="btn-shot" title="현재 화면 PNG 저장">📷</button>
   <button id="btn-export" title="배치·색 JSON 내보내기">내보내기</button>
   <label class="btn" title="JSON 불러오기">불러오기<input id="file-import" type="file" accept="application/json" hidden></label>
-  <button id="btn-reset">초기화</button>
+  <button id="btn-reset" title="코드(plan.js)에 저장된 원본 구조로 되돌리기 — 배치·색·밝기 모두">↺ 원본</button>
   <button id="btn-panel" title="패널 접기/펴기">☰</button>
 </header>
 
@@ -105,6 +106,7 @@
     <label>폭<input id="ip-w" type="number" step="0.05" min="0.05"></label>
     <label>깊이<input id="ip-d" type="number" step="0.05" min="0.05"></label>
     <label>높이<input id="ip-h" type="number" step="0.05" min="0.05"></label>
+    <label id="ip-y0-row" hidden>설치 높이<input id="ip-y0" type="number" step="0.05" min="0"></label>
   </div>
   <div class="row2">
     <button id="ip-rotl">↶ 15°</button><button id="ip-rotr">↷ 15°</button><button id="ip-rot90">90°</button>
@@ -112,7 +114,8 @@
   </div>
   <div id="ip-light" hidden>
     <label class="row"><span>켜짐</span><input id="ip-lit" type="checkbox"></label>
-    <label class="row"><span>세기</span><input id="ip-pw" type="range" min="0" max="3" step="0.1"></label>
+    <label class="row"><span>소비전력(W)</span><input id="ip-watt" type="number" step="1" min="1" style="width:70px"></label>
+    <label class="row"><span>조광(%)</span><input id="ip-pw" type="range" min="0" max="1" step="0.05"></label>
     <label class="row"><span>색온도</span><select id="ip-kelvin"></select></label>
   </div>
   <p id="ip-dims" class="hint"></p>
