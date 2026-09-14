@@ -15,34 +15,34 @@ export const PAINTS = {
   'floor.bath':     { label: '욕실 바닥',       group: '바닥', color: '#cfc8b8', finish: 'tile30' },
   'floor.foyer':    { label: '현관 바닥',       group: '바닥', color: '#3a3a3c', finish: 'tile30' },
   'floor.balcony':  { label: '발코니 바닥',     group: '바닥', color: '#9a9a9a', finish: 'tile30' },
-  'kitchen.door':   { label: '주방 하부장 도어', group: '주방', color: '#c8c8c8', finish: 'plain', rough: 0.45 },
-  'kitchen.upper':  { label: '주방 상부장',     group: '주방', color: '#d2d2d2', finish: 'plain', rough: 0.45 },
-  'kitchen.top':    { label: '주방 상판',       group: '주방', color: '#3a3a3a', finish: 'plain', rough: 0.3 },
+  'kitchen.door':   { label: '주방 하부장 도어', group: '주방', color: '#c8c8c8', finish: 'satin' },        // 반광 PET
+  'kitchen.upper':  { label: '주방 상부장',     group: '주방', color: '#d2d2d2', finish: 'satin' },
+  'kitchen.top':    { label: '주방 상판',       group: '주방', color: '#3a3a3a', finish: 'satin' },        // 무광 세라믹/쿼츠
   'appliance':      { label: '가전(블랙)',      group: '주방', color: '#141414', finish: 'gloss' },
-  'steel':          { label: '스테인리스',      group: '주방', color: '#b9bcc0', finish: 'gloss', metal: 0.9, rough: 0.3 },
-  'wardrobe':       { label: '붙박이장',        group: '가구', color: '#f4f4f4', finish: 'plain', rough: 0.4 },
+  'steel':          { label: '스테인리스',      group: '주방', color: '#b9bcc0', finish: 'brushed' },
+  'wardrobe':       { label: '붙박이장',        group: '가구', color: '#f4f4f4', finish: 'plain', rough: 0.5 },
   'tvwall':         { label: 'TV장 몸체',       group: '가구', color: '#8a8a8a', finish: 'plain', rough: 0.5 },
   'tvwall.shelf':   { label: 'TV장 선반',       group: '가구', color: '#f5f5f5', finish: 'plain', rough: 0.5 },
   'sofa':           { label: '소파',            group: '가구', color: '#f0efec', finish: 'fabric' },
   'bed.frame':      { label: '침대 프레임',     group: '가구', color: '#a88a6a', finish: 'wood' },
   'bed.linen':      { label: '침구',            group: '가구', color: '#f7f7f7', finish: 'fabric' },
   'study.cabinet':  { label: '서재 수납장',     group: '가구', color: '#f4f4f4', finish: 'plain', rough: 0.4 },
-  'study.top':      { label: '서재 상판(블랙)', group: '가구', color: '#1e1e1e', finish: 'plain', rough: 0.5 },   // 책상·하부장·침대 선반 상판 공용 — 검은 단색
+  'study.top':      { label: '서재 상판(블랙)', group: '가구', color: '#1e1e1e', finish: 'satin' },   // 책상·하부장·침대 선반 상판 공용 — 검은 단색
   'shoe':           { label: '신발장',          group: '가구', color: '#4b4b4b', finish: 'plain', rough: 0.45 },
   'wood.desk':      { label: '책상·테이블',     group: '가구', color: '#b99a78', finish: 'wood' },
   'door':           { label: '방문',            group: '건축', color: '#f0f0f0', finish: 'plain', rough: 0.5 },
   'door.front':     { label: '현관문',          group: '건축', color: '#3a3a3a', finish: 'plain', rough: 0.4 },
-  'frame.black':    { label: '중문·창 프레임(흑)', group: '건축', color: '#1c1c1c', finish: 'gloss', metal: 0.6 },
+  'frame.black':    { label: '중문·창 프레임(흑)', group: '건축', color: '#1c1c1c', finish: 'satin', metal: 0.4 },   // 분체도장 알루미늄
   'frame.white':    { label: '창틀(백)',        group: '건축', color: '#f4f4f4', finish: 'plain', rough: 0.4 },
   'sanitary':       { label: '도기(변기·세면대)', group: '욕실', color: '#ffffff', finish: 'gloss' },
   'bath.acc':       { label: '욕실 액세서리(블랙)', group: '욕실', color: '#2a2a2a', finish: 'gloss', metal: 0.5, rough: 0.35 },
   'bath.ledge':     { label: '욕실 젠다이',     group: '욕실', color: '#3b3b3b', finish: 'plain', rough: 0.3 },
-  'towel':          { label: '수건',            group: '욕실', color: '#efe9dc', finish: 'fabric' },
+  'towel':          { label: '수건',            group: '욕실', color: '#efe9dc', finish: 'fabric', sheen: 0.6 },
   'washer':         { label: '세탁기',          group: '가전', color: '#f2f2f2', finish: 'gloss', rough: 0.3 },
   'fridge':         { label: '냉장고',          group: '가전', color: '#e9e9e9', finish: 'gloss', rough: 0.3 },
   'plant':          { label: '식물',            group: '가구', color: '#3f7d3a', finish: 'fabric' },
   'pot':            { label: '화분',            group: '가구', color: '#8a7a6a', finish: 'plain' },
-  'rug':            { label: '러그',            group: '가구', color: '#b7aa9a', finish: 'fabric' },
+  'rug':            { label: '러그',            group: '가구', color: '#b7aa9a', finish: 'fabric', sheen: 0.2 },
   'shelf':          { label: '책장(모듈)',      group: '가구', color: '#f4f4f4', finish: 'plain', rough: 0.5 },
   'chair':          { label: '의자',            group: '가구', color: '#2e2e2e', finish: 'fabric' },
   'shade':          { label: '조명 갓·바디',    group: '조명', color: '#2b2b2b', finish: 'plain', rough: 0.5 },
@@ -52,13 +52,23 @@ export const DEFAULT_PAINTS = JSON.parse(JSON.stringify(PAINTS));
 
 const mats = new Map();
 
+// 광학 파라미터(페인트 → 마감 프리셋 → 기본값 순으로 결정)
+//   rough  거칠기 0(거울)~1(완전 무광)      metal  금속성 0~1
+//   env    환경 반사 세기                    coat   클리어코트 0~1(도장·유광 타일·바니시 나무의 얇은 광택층), coatRough 그 층의 거칠기
+//   sheen  천의 결 광택 0~1(패브릭)          spec   비금속 반사율 배율(0.5 = 표준 유전체 F0 4%)
+export const OPTICS = ['rough', 'metal', 'env', 'coat', 'coatRough', 'sheen', 'spec'];
 function apply(m, p) {
   const f = FINISHES[p.finish] || FINISHES.plain;
   const kind = f.kind || p.finish;
   m.color.set(p.color);
   m.roughness = p.rough ?? f.rough;
-  m.metalness = p.metal ?? 0;
-  m.envMapIntensity = f.env ?? 0.5;
+  m.metalness = p.metal ?? f.metal ?? 0;
+  m.envMapIntensity = p.env ?? f.env ?? 0.5;
+  m.clearcoat = p.coat ?? f.coat ?? 0;
+  m.clearcoatRoughness = p.coatRough ?? f.coatRough ?? 0.25;
+  m.sheen = p.sheen ?? f.sheen ?? 0;
+  m.sheenRoughness = 0.8; m.sheenColor.set('#ffffff');
+  m.specularIntensity = p.spec ?? f.spec ?? 1;
   if (f.size) {
     m.map = texture(kind, f.size, p.sizeY || f.size);
     m.bumpMap = m.map; m.bumpScale = f.bump;
@@ -70,7 +80,7 @@ export function getMaterial(key) {
   if (!mats.has(key)) {
     const p = PAINTS[key];
     if (!p) throw new Error('unknown paint ' + key);
-    const m = new THREE.MeshStandardMaterial({ envMapIntensity: 0.6 });
+    const m = new THREE.MeshPhysicalMaterial({ envMapIntensity: 0.6 });   // Physical: 클리어코트·시인 지원
     apply(m, p);
     m.userData.paint = key;
     mats.set(key, m);

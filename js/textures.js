@@ -130,15 +130,24 @@ export function texture(kind, sizeX = 1, sizeY = sizeX) {
 }
 
 // 마감 프리셋: 패턴 1유닛의 실제 크기(m)·거칠기·범프
-// env: 환경맵 반사 세기 — 유광·타일·대리석은 조명이 면에 비치도록 높게
+// 마감별 광학 기본값 — 실제 자재의 반사 특성을 흉내낸다. 페인트/스킴에서 rough·env·coat 등으로 개별 덮어쓸 수 있다.
+//   env: 환경 반사 세기 · coat: 클리어코트(도장 광택층) · sheen: 천 결 광택 · spec: 비금속 반사율 배율
 export const FINISHES = {
-  plain:     { label: '무광',      size: null, rough: 0.6,  bump: 0,     env: 0.5 },
-  gloss:     { label: '유광',      size: null, rough: 0.12, bump: 0,     env: 1.1 },
-  wallpaper: { label: '벽지',      size: 0.5,  rough: 0.9,  bump: 0.004, env: 0.3 },
-  tile:      { label: '타일 600',  size: 0.6,  rough: 0.28, bump: 0.012, env: 0.9 },
-  tile30:    { label: '타일 300',  size: 0.3,  rough: 0.3,  bump: 0.012, env: 0.85, kind: 'tile' },
-  wood:      { label: '원목 마루', size: 1.0,  rough: 0.45, bump: 0.006, env: 0.5 },
-  concrete:  { label: '콘크리트',  size: 1.5,  rough: 0.85, bump: 0.01,  env: 0.35 },
-  marble:    { label: '대리석',    size: 1.2,  rough: 0.15, bump: 0.002, env: 1.0 },
-  fabric:    { label: '패브릭',    size: 0.3,  rough: 1.0,  bump: 0.006, env: 0.2 },
+  plain:     { label: '무광 도장',   size: null, rough: 0.6,  bump: 0,     env: 0.5 },
+  matte:     { label: '초무광',      size: null, rough: 0.85, bump: 0,     env: 0.25, spec: 0.6 },
+  satin:     { label: '반광 도장',   size: null, rough: 0.35, bump: 0,     env: 0.8,  coat: 0.3, coatRough: 0.3 },
+  gloss:     { label: '유광',        size: null, rough: 0.12, bump: 0,     env: 1.1,  coat: 0.6, coatRough: 0.08 },
+  lacquer:   { label: '하이그로시', size: null, rough: 0.08, bump: 0,     env: 1.3,  coat: 1.0, coatRough: 0.04 },
+  wallpaper: { label: '벽지',        size: 0.5,  rough: 0.9,  bump: 0.004, env: 0.3,  spec: 0.6 },
+  tile:      { label: '폴리싱 타일 600', size: 0.6, rough: 0.22, bump: 0.008, env: 1.0, coat: 0.35, coatRough: 0.1 },
+  tile30:    { label: '타일 300',    size: 0.3,  rough: 0.3,  bump: 0.012, env: 0.85, coat: 0.2, coatRough: 0.15, kind: 'tile' },
+  tilematte: { label: '무광 타일 600', size: 0.6, rough: 0.55, bump: 0.012, env: 0.5, kind: 'tile' },
+  wood:      { label: '오일 마루',   size: 1.0,  rough: 0.5,  bump: 0.006, env: 0.45, coat: 0.08, coatRough: 0.5 },
+  woodgloss: { label: '바니시 마루', size: 1.0,  rough: 0.3,  bump: 0.006, env: 0.8,  coat: 0.5, coatRough: 0.15, kind: 'wood' },
+  concrete:  { label: '콘크리트',    size: 1.5,  rough: 0.85, bump: 0.01,  env: 0.35, spec: 0.7 },
+  stone:     { label: '혼드 스톤',   size: 1.2,  rough: 0.5,  bump: 0.002, env: 0.55, kind: 'marble' },
+  marble:    { label: '폴리싱 대리석', size: 1.2, rough: 0.12, bump: 0.002, env: 1.1, coat: 0.5, coatRough: 0.06 },
+  fabric:    { label: '패브릭',      size: 0.3,  rough: 1.0,  bump: 0.006, env: 0.2,  sheen: 0.45, spec: 0.5 },
+  leather:   { label: '가죽',        size: 0.3,  rough: 0.45, bump: 0.004, env: 0.6,  coat: 0.15, coatRough: 0.4, kind: 'fabric' },
+  brushed:   { label: '헤어라인 금속', size: null, rough: 0.4, bump: 0,    env: 1.0,  metal: 0.9 },
 };

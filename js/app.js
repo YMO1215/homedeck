@@ -3,7 +3,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { H, S, mx, mz, CENTER, BOUNDS, VIEWS, DEFAULT_ITEMS, PLAN_VERSION, WALLS } from './plan.js';
-import { PAINTS, DEFAULT_PAINTS, updatePaint, getMaterial } from './materials.js';
+import { PAINTS, DEFAULT_PAINTS, updatePaint, getMaterial, OPTICS } from './materials.js';
 import { FINISHES } from './textures.js';
 import { SCHEMES } from './schemes.js';
 import { buildWalls, buildFloors, buildDoors, buildFixtures, buildItem, BUILDERS, CATALOG, CATALOG_LIGHTS, KELVIN_OPTIONS, wattOf } from './builders.js';
@@ -33,12 +33,12 @@ function applySaved(s) {
   if (s.pv === 2) { for (const k of Object.keys(PAINTS)) if (s.paints && s.paints[k]) updatePaint(k, s.paints[k]); }
   else if (s.paints) setTimeout(() => flash('저장 형식이 바뀌어 색·마감을 기본값으로 되돌렸습니다'), 1600);
 }
-const PAINT_FIELDS = ['color', 'finish', 'rough', 'metal'];
+const PAINT_FIELDS = ['color', 'finish', ...OPTICS];
 function serialize() {
   const paints = {};
   for (const k of Object.keys(PAINTS)) {
     const p = PAINTS[k], d = DEFAULT_PAINTS[k];
-    if (PAINT_FIELDS.some(f => p[f] !== d[f])) { paints[k] = {}; for (const f of PAINT_FIELDS) paints[k][f] = p[f]; }
+    if (PAINT_FIELDS.some(f => (p[f] ?? null) !== (d[f] ?? null))) { paints[k] = {}; for (const f of PAINT_FIELDS) paints[k][f] = p[f] ?? null; }   // 비운 값은 null 로(JSON 유지)
   }
   return { v: 1, pv: 2, plan: PLAN_VERSION, items: state.items, paints, exposure: state.exposure, sun: state.sun, lamp: state.lamp, scheme: state.scheme, savedAt: new Date().toISOString() };
 }
@@ -392,7 +392,8 @@ const LIVING_DEFAULT_TYPES = ['tvwall', 'sofa', 'ottoman'];
 function applyScheme(id, { quiet } = {}) {
   const sc = SCHEMES.find(s => s.id === id); if (!sc) return;
   // 1) 색·마감: 기본값 위에 스킴 패치
-  for (const k of Object.keys(PAINTS)) updatePaint(k, { ...DEFAULT_PAINTS[k], rough: undefined, metal: undefined, ...(sc.paints[k] || {}) });
+  const clear = Object.fromEntries(OPTICS.map(f => [f, undefined]));   // 스킴이 안 준 광학값은 마감 프리셋 기본으로
+  for (const k of Object.keys(PAINTS)) updatePaint(k, { ...DEFAULT_PAINTS[k], ...clear, ...(sc.paints[k] || {}) });
   document.querySelectorAll('.prow').forEach(r => syncPaintRows(r.dataset.key));
   // 2) 거실 구성: 스킴이 자기 거실 세트(living)를 가진 경우에만 zone:'living' 아이템을 교체.
   //    living: null 이면 가구 배치·형태는 손대지 않고 색·마감만 바뀐다(현재 모든 스킴).
