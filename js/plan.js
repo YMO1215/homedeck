@@ -42,7 +42,7 @@ export const WALLS = [
   { a: [1300, 4500], b: [5260, 4500], t: 140, paint: 'wall' },                 // 안방 남벽(거실 TV벽)
   { a: [5200, 0], b: [5200, 4500], t: 120, paint: 'wall',
     gaps: [{ from: 400, to: 1300, kind: 'door', head: 2.1 },                  // 안방욕실 문
-           { from: 3650, to: 4450, kind: 'door', head: 2.1 }] },              // 안방 문
+           { from: 3550, to: 4350, kind: 'door', head: 2.1 }] },              // 안방 문 — 남벽 면(4,430)에서 80 들여 문틀 설치 → 90° 개방 가능
   // 욕실 블록 — 안방욕실 1,600 × 1,600 · 공용욕실 2,400 × 1,700 (1,600 에서 분할)
   { a: [5200, 1600], b: [7660, 1600], t: 120, paint: 'wall' },
   { a: [6800, 0], b: [6800, 1660], t: 120, paint: 'wall' },                    // 안방욕실 동벽(작은방 쪽)
@@ -104,7 +104,7 @@ export const ROOMS = [
 // hinge/end: mm · open: 여닫힌 각도(도, 부호로 방향) · kind: door | front | glass
 // 규칙: 방문은 모두 방 안쪽으로 열린다(중문·현관문·발코니 문 제외). 문짝 방향 = (cos θ, −sin θ), θ = atan2(−dz, dx) + open
 export const DOORS = [
-  { hinge: [5200, 4450], end: [5200, 3650], open: 70, kind: 'door', label: '안방 문' },       // 남쪽 힌지, 안방 안쪽(서)으로 70° (남벽에 붙지 않게)
+  { hinge: [5200, 4350], end: [5200, 3550], open: 90, kind: 'door', label: '안방 문' },       // 남쪽 힌지, 안방 안쪽(서)으로 90° — 남벽과 6 cm 여유
   { hinge: [5200, 1300], end: [5200, 400], open: -88, kind: 'door', label: '안방욕실 문' },     // 활짝 열림
   { hinge: [6100, 3300], end: [5300, 3300], open: -88, kind: 'door', label: '공용욕실 문' },    // 활짝 열림
   { hinge: [7900, 3300], end: [8700, 3300], open: 90, kind: 'door', label: '작은방 문' },      // 서쪽 힌지, 방 안쪽으로 활짝
