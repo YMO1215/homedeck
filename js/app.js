@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { H, mx, mz, CENTER, BOUNDS, VIEWS, DEFAULT_ITEMS } from './plan.js';
+import { H, mx, mz, CENTER, BOUNDS, VIEWS, DEFAULT_ITEMS, PLAN_VERSION } from './plan.js';
 import { PAINTS, DEFAULT_PAINTS, updatePaint, getMaterial } from './materials.js';
 import { FINISHES } from './textures.js';
 import { buildWalls, buildFloors, buildDoors, buildFixtures, buildExterior, buildItem, BUILDERS, CATALOG } from './builders.js';
@@ -22,14 +22,16 @@ function loadState() {
   return null;
 }
 function applySaved(s) {
-  state.items = s.items;
+  // 평면 좌표계가 바뀐 저장본이면 가구 배치는 기본값으로, 색·마감만 이어받는다
+  state.items = s.plan === PLAN_VERSION ? s.items : JSON.parse(JSON.stringify(DEFAULT_ITEMS));
+  if (s.plan !== PLAN_VERSION) setTimeout(() => flash('평면이 실측으로 바뀌어 가구 배치를 기본값으로 되돌렸습니다(색은 유지)'), 800);
   state.exposure = s.exposure ?? 1.0; state.sun = s.sun ?? 1.0;
   for (const k of Object.keys(PAINTS)) if (s.paints && s.paints[k]) updatePaint(k, s.paints[k]);
 }
 function serialize() {
   const paints = {};
   for (const k of Object.keys(PAINTS)) { const { color, finish, rough, metal } = PAINTS[k]; paints[k] = { color, finish, rough, metal }; }
-  return { v: 1, items: state.items, paints, exposure: state.exposure, sun: state.sun, savedAt: new Date().toISOString() };
+  return { v: 1, plan: PLAN_VERSION, items: state.items, paints, exposure: state.exposure, sun: state.sun, savedAt: new Date().toISOString() };
 }
 let saveTimer = 0;
 function save() {
