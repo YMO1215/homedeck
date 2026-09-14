@@ -102,7 +102,7 @@ function applyLampAll() { for (const g of objs.values()) applyLamp(g, g.userData
 function unmountItem(id) {
   const g = objs.get(id); if (!g) return;
   itemRoot.remove(g); objs.delete(id);
-  g.traverse(o => { if (o.isMesh) { o.geometry.dispose(); if (o.material.userData.tinted) o.material.dispose(); } });
+  g.traverse(o => { if (o.userData.mirror) o.dispose(); else if (o.isMesh) { o.geometry.dispose(); if (o.material.userData.tinted) o.material.dispose(); } });   // 거울은 렌더타깃까지 해제
 }
 function mountAll() { for (const id of [...objs.keys()]) unmountItem(id); for (const it of state.items) mountItem(it); }
 

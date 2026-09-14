@@ -2,6 +2,7 @@
 import * as THREE from 'three';
 import { RectAreaLightUniformsLib } from 'three/addons/lights/RectAreaLightUniformsLib.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import { Reflector } from 'three/addons/objects/Reflector.js';
 import { S, H, mx, mz, WALLS, ROOMS, DOORS, FIXTURES, CENTER } from './plan.js';
 RectAreaLightUniformsLib.init();   // 면광원(평판등·라인등)용 LUT — 한 번만
 import { getMaterial, tinted, SPECIAL } from './materials.js';
@@ -39,6 +40,14 @@ export function rbx(parent, w, h, d, mat, x = 0, y = 0, z = 0, r = 0.03, o = {})
 export function lathe(parent, profile, mat, x = 0, y = 0, z = 0, seg = 32) {
   const m = new THREE.Mesh(new THREE.LatheGeometry(profile.map(([r, yy]) => new THREE.Vector2(r, yy)), seg), mat);
   m.position.set(x, y, z); m.castShadow = true; m.receiveShadow = true;
+  parent.add(m); return m;
+}
+// 실제 거울: 환경맵(가짜 스튜디오 조명)이 아니라 씬을 거울 시점에서 다시 그려 비춘다 → 그 방에서 실제로 보이는 등·가구만 비친다.
+// 평면(w × h)이 +z 를 향한다. 중심 (x, y+h/2, z).
+export function mirror(parent, w, h, x, y, z) {
+  const m = new Reflector(new THREE.PlaneGeometry(w, h), { clipBias: 0.003, textureWidth: 768, textureHeight: 768, color: 0xdadada });
+  m.position.set(x, y + h / 2, z);
+  m.userData.mirror = true;
   parent.add(m); return m;
 }
 export function cyl(parent, r, h, mat, x = 0, y = 0, z = 0, o = {}) {
@@ -359,7 +368,8 @@ export const BUILDERS = {
       cabinet(g, it, M, { h: it.h - 0.4, y: 0.4, drawers: 1 });
       bx(g, it.w, 0.03, it.d, M('body'), 0, it.h - 0.03, 0);
       bx(g, 0.03, 0.4, it.d - 0.05, M('body'), -it.w / 2 + 0.015, 0, 0); bx(g, 0.03, 0.4, it.d - 0.05, M('body'), it.w / 2 - 0.015, 0, 0);
-      bx(g, it.w - 0.05, 0.9, 0.02, SPECIAL.mirror, 0, 1.0, -it.d / 2 + 0.01, { cast: false });
+      bx(g, it.w - 0.05, 0.9, 0.02, M('body'), 0, 1.0, -it.d / 2 + 0.01, { cast: false });   // 거울 뒤판
+      mirror(g, it.w - 0.07, 0.88, 0, 1.01, -it.d / 2 + 0.021);
     } },
   basin: { label: '세면대', parts: { body: 'sanitary' }, def: { w: 0.6, d: 0.45, h: 0.85 },
     build(g, it, M) {
@@ -382,8 +392,8 @@ export const BUILDERS = {
     build(g, it, M) {
       const y = it.y0 ?? 1.1;                // 하단 높이(m)
       bx(g, it.w, it.h, it.d - 0.01, M('body'), 0, y, -0.005);
-      bx(g, it.w / 2 - 0.006, it.h - 0.01, 0.006, SPECIAL.mirror, -it.w / 4, y + 0.005, it.d / 2 - 0.003, { cast: false });
-      bx(g, it.w / 2 - 0.006, it.h - 0.01, 0.006, SPECIAL.mirror, it.w / 4, y + 0.005, it.d / 2 - 0.003, { cast: false });
+      mirror(g, it.w / 2 - 0.008, it.h - 0.012, -it.w / 4, y + 0.006, it.d / 2 + 0.001);      // 2도어 거울(실제 반사)
+      mirror(g, it.w / 2 - 0.008, it.h - 0.012, it.w / 4, y + 0.006, it.d / 2 + 0.001);
       bx(g, 0.004, it.h - 0.01, 0.007, SPECIAL.dark, 0, y + 0.005, it.d / 2 - 0.003, { cast: false });   // 도어 틈
     } },
   towelbar: { label: '수건걸이(수건)', parts: { metal: 'steel', towel: 'towel' }, def: { w: 0.6, d: 0.12, h: 0.1 }, mount: 1.15,
