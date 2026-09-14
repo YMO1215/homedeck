@@ -445,7 +445,7 @@ export const BUILDERS = {
       const leg = M('leg');
       bx(g, 0.03, h - t, d + (eL ? ext : 0) - 0.05, leg, -w / 2 + 0.03, 0, eL ? ext / 2 : 0);   // 끝 측판(확장 깊이 반영)
       bx(g, 0.03, h - t, d + (eR ? ext : 0) - 0.05, leg, w / 2 - 0.03, 0, eR ? ext / 2 : 0);
-      bx(g, 0.03, h - t, d - 0.05, leg, 0, 0, 0);                                    // 중간 측판
+      if (it.midLeg) bx(g, 0.03, h - t, d - 0.05, leg, 0, 0, 0);                     // 중간 측판(기본 없음, midLeg: true 로 켬)
       bx(g, w - 0.12, h - 0.35, 0.02, leg, 0, 0.3, -d / 2 + 0.05);                   // 뒤판
     } },
   desk_dark: { label: '책상(다크 상판)', parts: { top: 'study.top', leg: 'study.cabinet' }, def: { w: 1.4, d: 0.6, h: 0.75 },

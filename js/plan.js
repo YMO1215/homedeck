@@ -30,7 +30,7 @@ export const WALLS = [
     gaps: [{ from: 300, to: 4200, kind: 'window', sill: 0.95, head: 2.2, mull: 3 },           // 다용도실 창
            { from: 4800, to: 8700, kind: 'window', sill: 0.5, head: 2.2, mull: 2 }] },        // 거실 창(발코니 확장)
   { a: [11700, 0], b: [11700, 9000], t: 200, paint: 'wall',
-    gaps: [{ from: 440, to: 2900, kind: 'window', sill: 0.5, head: 2.2, mull: 2 },            // 작은방 창(두 모서리 수납장 사이)
+    gaps: [{ from: 440, to: 2900, kind: 'window', sill: 1.5, head: 2.2, mull: 2 },            // 작은방 창(두 모서리 수납장 사이) — 하단 1.5 m 고창
            { from: 4100, to: 5200, kind: 'window', sill: 1.0, head: 1.45, mull: 1 },         // 주방창(싱크 위 작은 2짝 창, 위는 상부장)
            { from: 6300, to: 8700, kind: 'window', sill: 0.95, head: 2.2, mull: 2 }] },
   // 다용도실(세탁실) ↔ 안방 : 창 · 다용도실 ↔ 거실(확장 발코니) : 문
