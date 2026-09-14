@@ -6,7 +6,7 @@
 //            z: 0 | 1,600(욕실 분할) | 3,300 | 4,500(안방/거실) | 6,000 | 7,000(현관 북벽) | 9,000
 // 탑뷰 렌더 반영(v4): 거실 서쪽 발코니 확장 · 작은방 발코니 확장 · 다용도실 문 · 욕실 문 열림 ·
 //   안방욕실 축소(1,600 폭) · 서재 3,300 폭 + ㄱ자 책상/옷장/침대 · 현관 북벽 7,000
-export const PLAN_VERSION = 26;   // 좌표계·기본 배치가 바뀌면 올린다 → 옛 저장 배치는 버리고 색만 유지
+export const PLAN_VERSION = 27;   // 좌표계·기본 배치가 바뀌면 올린다 → 옛 저장 배치는 버리고 색만 유지
 export const ORX = 0, ORY = 0;
 export const S = 0.001;          // 1 단위 = 1mm
 export const H = 2.3;            // 천장 높이(m)
@@ -224,3 +224,6 @@ export const DEFAULT_ITEMS = [
   I('downlight', '다용도실 매입등', 650, 2500, 0.096, 0.096, 0.03),
   I('downlight', '거실 창가 매입등', 650, 6700, 0.096, 0.096, 0.03),
 ];
+// 색온도 통일: 기본 배치의 모든 등은 4000K(주백색). kelvin_user 로 표시해 디자인 스킴이 덮어쓰지 않게 — 상단 '색온도'로 일괄 변경 가능
+const LIGHT_TYPES = new Set(['downlight', 'ledpanel', 'roundlight', 'pendant', 'pendant_line', 'globe', 'ring', 'cove', 'track', 'magline', 'maglens', 'magspot', 'magdual']);
+for (const it of DEFAULT_ITEMS) if (LIGHT_TYPES.has(it.type)) { it.kelvin = 4000; it.kelvin_user = true; }
