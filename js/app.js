@@ -173,7 +173,13 @@ const WALK_KEYS = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown
 const keyTime = new Map();                 // code → performance.now()
 const keys = { has: (c) => keyTime.has(c), get size() { return keyTime.size; } };
 function pruneKeys() { const now = performance.now(); for (const [c, t] of keyTime) if (now - t > 1100) keyTime.delete(c); }   // 윈도우 반복 지연 최대 1초
-$('#btn-walk').onclick = () => { walk.lock(); };
+// 걷기 시작: 현관문 밖 1.3 m 지점에서 문(북쪽)을 바라보며 들어간다
+const WALK_START = { pos: [5850, 10300], look: [5850, 8000] };
+$('#btn-walk').onclick = () => {
+  camera.position.set(mx(WALK_START.pos[0]), 1.5, mz(WALK_START.pos[1]));
+  camera.lookAt(mx(WALK_START.look[0]), 1.3, mz(WALK_START.look[1]));
+  invalidate(); walk.lock();
+};
 walk.addEventListener('lock', () => { document.body.classList.add('walking'); orbit.enabled = false; keyTime.clear(); for (const it of state.items) if (it.type === 'sensorlight') { it._sensorOn = false; it._sensorT = 0; } applyLampAll(); });
 walk.addEventListener('unlock', () => {
   document.body.classList.remove('walking'); orbit.enabled = true; keyTime.clear(); applyLampAll();   // 걷기 종료: 센서등은 다시 항상 켜짐
