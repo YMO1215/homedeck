@@ -545,14 +545,27 @@ function pointInPoly(x, z, poly) {
   return inside;
 }
 function roomAt(x, z) { const r = ROOMS.find(r => pointInPoly(x, z, r.poly)); return r ? r.id : null; }
-let lastRoom = 'init';
+// 면광원 프록시: 실내에서는 씬에 RectAreaLight 를 항상 딱 1개(roomRect)만 두고, 카메라가 있는 방의 면광원 자리로 옮겨 쓴다.
+// 광원 개수가 바뀌면 three 가 모든 재질의 셰이더를 다시 컴파일해(0.1~0.3 s 끊김) 방 경계마다 뚝뚝 끊기던 원인 — 개수를 고정해 없앤다.
+const roomRect = new THREE.RectAreaLight('#ffffff', 0, 1, 1); roomRect.visible = false; scene.add(roomRect);
+let lastInside = null;
+const _p = new THREE.Vector3(), _q = new THREE.Quaternion();
 function updateCulling() {
   const cx = camera.position.x, cz = camera.position.z, inside = camera.position.y < H;
-  const room = inside ? roomAt(cx, cz) : 'outside';
-  if (room !== lastRoom) {                                   // 면광원: 방이 바뀔 때만 갱신(셰이더 재컴파일 최소화)
-    lastRoom = room;
-    itemRoot.traverse(o => { if (o.isRectAreaLight) { const it = o.parent?.userData?.item; o.visible = room === 'outside' || !it || roomAt(it.x, it.z) === room; } });
+  if (inside !== lastInside) {                               // 실내 ↔ 천장 위(탑뷰) 전환 시에만 광원 개수가 바뀐다
+    lastInside = inside; roomRect.visible = inside;
+    itemRoot.traverse(o => { if (o.isRectAreaLight) o.visible = !inside; });
     invalidate();
+  }
+  if (inside) {
+    const room = roomAt(cx, cz);
+    let best = null, bestA = 0;                              // 그 방에서 가장 큰 면광원 하나
+    itemRoot.traverse(o => { if (o.isRectAreaLight) { const it = o.parent?.userData?.item; if (it && roomAt(it.x, it.z) === room) { const A = o.width * o.height; if (A > bestA) { bestA = A; best = o; } } } });
+    if (best) {
+      best.getWorldPosition(_p); best.getWorldQuaternion(_q);
+      roomRect.position.copy(_p); roomRect.quaternion.copy(_q);
+      roomRect.width = best.width; roomRect.height = best.height; roomRect.color.copy(best.color); roomRect.intensity = best.intensity;
+    } else roomRect.intensity = 0;
   }
   itemRoot.traverse(o => {                                   // 거울: 가까울 때만 실제 반사
     if (!o.userData.mirror) return;
