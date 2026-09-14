@@ -5,13 +5,14 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { H, mx, mz, CENTER, BOUNDS, VIEWS, DEFAULT_ITEMS, PLAN_VERSION } from './plan.js';
 import { PAINTS, DEFAULT_PAINTS, updatePaint, getMaterial } from './materials.js';
 import { FINISHES } from './textures.js';
+import { SCHEMES } from './schemes.js';
 import { buildWalls, buildFloors, buildDoors, buildFixtures, buildExterior, buildItem, BUILDERS, CATALOG, CATALOG_LIGHTS, KELVIN_OPTIONS } from './builders.js';
 
 const SAVE_KEY = 'homedeck.v1';
 const $ = (s) => document.querySelector(s);
 
 // ── 상태 ───────────────────────────────────────────────────────
-const state = { items: [], exposure: 1.0, sun: 1.0, lamp: 1.0 };
+const state = { items: [], exposure: 1.0, sun: 1.0, lamp: 1.0, scheme: 'base' };
 const objs = new Map();          // itemId → Group
 
 function loadState() {
@@ -25,13 +26,13 @@ function applySaved(s) {
   // 평면 좌표계가 바뀐 저장본이면 가구 배치는 기본값으로, 색·마감만 이어받는다
   state.items = s.plan === PLAN_VERSION ? s.items : JSON.parse(JSON.stringify(DEFAULT_ITEMS));
   if (s.plan !== PLAN_VERSION) setTimeout(() => flash('평면·조명 구성이 바뀌어 배치를 기본값으로 되돌렸습니다(색은 유지)'), 800);
-  state.exposure = s.exposure ?? 1.0; state.sun = s.sun ?? 1.0; state.lamp = s.lamp ?? 1.0;
+  state.exposure = s.exposure ?? 1.0; state.sun = s.sun ?? 1.0; state.lamp = s.lamp ?? 1.0; state.scheme = s.scheme || 'base';
   for (const k of Object.keys(PAINTS)) if (s.paints && s.paints[k]) updatePaint(k, s.paints[k]);
 }
 function serialize() {
   const paints = {};
   for (const k of Object.keys(PAINTS)) { const { color, finish, rough, metal } = PAINTS[k]; paints[k] = { color, finish, rough, metal }; }
-  return { v: 1, plan: PLAN_VERSION, items: state.items, paints, exposure: state.exposure, sun: state.sun, lamp: state.lamp, savedAt: new Date().toISOString() };
+  return { v: 1, plan: PLAN_VERSION, items: state.items, paints, exposure: state.exposure, sun: state.sun, lamp: state.lamp, scheme: state.scheme, savedAt: new Date().toISOString() };
 }
 let saveTimer = 0;
 function save() {
@@ -227,7 +228,7 @@ function showItemPanel(it) {
 $('#ip-lit').onchange = (e) => { const it = selected?.item; if (!it) return; it.lit = e.target.checked; rebuildItem(it); };
 $('#ip-pw').oninput = (e) => { const it = selected?.item; if (!it) return; it.pw = +e.target.value; applyLamp(objs.get(it.id), it); };
 $('#ip-pw').onchange = () => { const it = selected?.item; if (it) rebuildItem(it); };
-$('#ip-kelvin').onchange = (e) => { const it = selected?.item; if (!it) return; it.kelvin = +e.target.value; rebuildItem(it); };
+$('#ip-kelvin').onchange = (e) => { const it = selected?.item; if (!it) return; it.kelvin = +e.target.value; it.kelvin_user = true; rebuildItem(it); };
 for (const k of KELVIN_OPTIONS) { const o = document.createElement('option'); o.value = k; o.textContent = k + 'K'; $('#ip-kelvin').appendChild(o); }
 function fillItemFields(it) {
   if (IP.hidden) return;
@@ -308,6 +309,37 @@ fillCatalog($('#catalog-lights'), CATALOG_LIGHTS);
 $('#btn-unlock-all').onclick = () => { for (const it of state.items) it.locked = false; save(); flash('기본 배치 가구도 이동 가능'); if (selected?.item) fillItemFields(selected.item); };
 $('#btn-lock-all').onclick = () => { for (const it of state.items) it.locked = !!it.builtin; save(); flash('기본 배치 가구 잠금'); if (selected?.item) fillItemFields(selected.item); };
 
+// ── 디자인 스킴(원클릭 전체 교체) ──────────────────────────────
+const LIVING_DEFAULT_TYPES = ['tvwall', 'sofa', 'ottoman'];
+function applyScheme(id, { quiet } = {}) {
+  const sc = SCHEMES.find(s => s.id === id); if (!sc) return;
+  // 1) 색·마감: 기본값 위에 스킴 패치
+  for (const k of Object.keys(PAINTS)) updatePaint(k, { ...DEFAULT_PAINTS[k], rough: undefined, metal: undefined, ...(sc.paints[k] || {}) });
+  document.querySelectorAll('.prow').forEach(r => syncPaintRows(r.dataset.key));
+  // 2) 거실 구성: zone:'living' 태그(또는 옛 저장본의 소파·TV장·스툴)만 교체, 다른 방은 그대로
+  state.items = state.items.filter(it => !(it.zone === 'living' || (it.builtin && LIVING_DEFAULT_TYPES.includes(it.type))));
+  const living = sc.living ? sc.living : DEFAULT_ITEMS.filter(it => it.zone === 'living');
+  state.items.push(...JSON.parse(JSON.stringify(living)));
+  // 3) 조명 색온도
+  if (sc.kelvin) for (const it of state.items) if (BUILDERS[it.type]?.light && !it.kelvin_user) it.kelvin = sc.kelvin;
+  state.scheme = id;
+  mountAll(); deselect(); markScheme(); save();
+  if (!quiet) { setView(VIEWS.find(v => v.id === 'living_win')); viewSel.value = 'living_win'; flash(`디자인: ${sc.label}`); }
+}
+function markScheme() { document.querySelectorAll('.scheme').forEach(c => c.classList.toggle('on', c.dataset.id === state.scheme)); }
+{
+  const host = $('#schemes');
+  for (const sc of SCHEMES) {
+    const c = document.createElement('div'); c.className = 'scheme'; c.dataset.id = sc.id;
+    c.innerHTML = `<div class="sh"><b>${sc.label}</b><span>${sc.region}</span></div>
+      <div class="chips">${sc.palette.map(p => `<i style="background:${p}"></i>`).join('')}</div>
+      <p>${sc.desc}</p><button>이 디자인으로 보기</button>`;
+    c.querySelector('button').onclick = () => applyScheme(sc.id);
+    host.appendChild(c);
+  }
+  markScheme();
+}
+
 // ── 탭 · 상단 바 ───────────────────────────────────────────────
 document.querySelectorAll('.tab').forEach(t => t.onclick = () => {
   document.querySelectorAll('.tab').forEach(x => x.classList.toggle('on', x === t));
@@ -327,7 +359,7 @@ $('#btn-export').onclick = () => {
 };
 $('#file-import').onchange = async (e) => {
   const f = e.target.files[0]; if (!f) return;
-  try { const s = JSON.parse(await f.text()); if (s.v !== 1) throw 0; applySaved(s); mountAll(); deselect(); renderer.toneMappingExposure = state.exposure; sun.intensity = 2.2 * state.sun; $('#lamp').value = state.lamp; document.querySelectorAll('.prow').forEach(r => syncPaintRows(r.dataset.key)); save(); flash('불러옴'); }
+  try { const s = JSON.parse(await f.text()); if (s.v !== 1) throw 0; applySaved(s); mountAll(); deselect(); renderer.toneMappingExposure = state.exposure; sun.intensity = 2.2 * state.sun; $('#lamp').value = state.lamp; document.querySelectorAll('.prow').forEach(r => syncPaintRows(r.dataset.key)); markScheme(); save(); flash('불러옴'); }
   catch { flash('파일 형식이 맞지 않습니다'); }
   e.target.value = '';
 };
@@ -337,6 +369,7 @@ $('#btn-reset').onclick = () => {
   for (const k of Object.keys(PAINTS)) updatePaint(k, { ...DEFAULT_PAINTS[k] });
   state.items = JSON.parse(JSON.stringify(DEFAULT_ITEMS)); state.exposure = 1; state.sun = 1; state.lamp = 1;
   renderer.toneMappingExposure = 1; sun.intensity = 2.2; $('#exposure').value = 1; $('#sunlight').value = 1; $('#lamp').value = 1;
+  state.scheme = 'base'; markScheme();
   mountAll(); deselect(); document.querySelectorAll('.prow').forEach(r => syncPaintRows(r.dataset.key)); flash('초기화');
 };
 $('#btn-shot').onclick = () => {

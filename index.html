@@ -33,12 +33,19 @@
 
 <aside id="panel">
   <nav>
-    <button class="tab on" data-pane="paint">🎨 색·마감</button>
+    <button class="tab on" data-pane="design">✨ 디자인</button>
+    <button class="tab" data-pane="paint">🎨 색·마감</button>
     <button class="tab" data-pane="furn">🛋 가구</button>
     <button class="tab" data-pane="help">? 도움말</button>
   </nav>
 
-  <section id="pane-paint" class="pane">
+  <section id="pane-design" class="pane">
+    <p class="hint">거실을 <b>소파·TV장 대신 책장 거실</b>로 바꾼 디자인 3안. 한 번 누르면 <b>집 전체 색·마감 + 거실 가구·조명</b>이 통째로 바뀝니다. 다른 방 가구는 그대로, 원안으로 언제든 되돌릴 수 있습니다.</p>
+    <div id="schemes"></div>
+    <p class="hint">적용 후 색·마감 탭에서 세부 색을 더 손보거나, 가구 탭에서 책장·의자를 옮길 수 있습니다(잠금 해제 후).</p>
+  </section>
+
+  <section id="pane-paint" class="pane" hidden>
     <p class="hint">화면에서 <b>벽·바닥·천장·가구 면을 클릭</b>하면 그 면만 바로 고칠 수 있습니다. 아래는 전체 목록입니다.</p>
     <div id="swatches" class="swatches"></div>
     <div id="paint-list"></div>

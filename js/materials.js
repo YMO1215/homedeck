@@ -40,6 +40,7 @@ export const PAINTS = {
   'plant':          { label: '식물',            group: '가구', color: '#3f7d3a', finish: 'fabric' },
   'pot':            { label: '화분',            group: '가구', color: '#8a7a6a', finish: 'plain' },
   'rug':            { label: '러그',            group: '가구', color: '#b7aa9a', finish: 'fabric' },
+  'shelf':          { label: '책장(모듈)',      group: '가구', color: '#f4f4f4', finish: 'plain', rough: 0.5 },
   'chair':          { label: '의자',            group: '가구', color: '#2e2e2e', finish: 'fabric' },
   'shade':          { label: '조명 갓·바디',    group: '조명', color: '#2b2b2b', finish: 'plain', rough: 0.5 },
 };

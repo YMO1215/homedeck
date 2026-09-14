@@ -154,6 +154,9 @@ export function buildExterior(scene) {
     bx(scene, w, h, d, SPECIAL.building, CENTER.x + ox, 0, CENTER.z + oz, { cast: false });
 }
 
+// 장식 책 재질(칠하지 않음)
+const BOOK_MATS = ['#c9b9a2', '#7a8b6f', '#3f5d7a', '#8b3a3a', '#e6dfd2', '#2e2e2e', '#b08d57', '#d7a86e', '#556b5a', '#f2f2f2'].map(c => new THREE.MeshStandardMaterial({ color: c, roughness: 0.85 }));
+
 // ── 가구 빌더 ──────────────────────────────────────────────────
 // 각 항목: label, parts{part:paintKey}, def{w,d,h}, build(g, it, M)
 // 좌표계: 발자국 중심이 원점, 바닥 y=0, 정면 +z.
@@ -373,6 +376,42 @@ export const BUILDERS = {
       const sh = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.2, 0.28, 24, 1, true), SPECIAL.lamp.clone());
       sh.material.side = THREE.DoubleSide; sh.material.emissiveIntensity = 1.2; sh.position.y = it.h - 0.14; g.add(sh);
     } },
+  shelfwall: { label: '책장 벽(모듈)', parts: { frame: 'shelf' }, def: { w: 2.4, d: 0.35, h: 2.28 },
+    build(g, it, M) {
+      const { w, d, h } = it, m = M('frame'), t = 0.025;
+      const baseH = it.base === false ? 0 : Math.min(0.6, h * 0.4);
+      if (baseH) cabinet(g, { w, d, h: baseH, doors: Math.max(2, Math.round(w / 0.6)) }, M, { bodyPart: 'frame' });
+      const bays = Math.max(1, Math.round(w / 0.8)), rows = Math.max(1, Math.round((h - baseH) / 0.38));
+      bx(g, w, h - baseH, 0.012, m, 0, baseH, -d / 2 + 0.006);                                     // 뒤판
+      for (let i = 0; i <= bays; i++) bx(g, t, h - baseH, d, m, -w / 2 + t / 2 + (w - t) * i / bays, baseH, 0);
+      for (let r = 0; r <= rows; r++) bx(g, w, t, d, m, 0, baseH + (h - baseH - t) * r / rows, 0);
+      if (it.books !== false) {                                                                   // 장식 책
+        let seed = 7; const rnd = () => (seed = (seed * 9301 + 49297) % 233280) / 233280;
+        const bw = (w - t) / bays, rh = (h - baseH - t) / rows;
+        for (let b = 0; b < bays; b++) for (let r = 0; r < rows; r++) {
+          if (rnd() < 0.25) continue;
+          const x0 = -w / 2 + t + bw * b + 0.03, y0 = baseH + t + rh * r, fill = 0.35 + rnd() * 0.5;
+          let x = x0; const xEnd = x0 + (bw - t - 0.06) * fill;
+          while (x < xEnd) { const tw = 0.018 + rnd() * 0.03, th = Math.min(rh - 0.04, 0.17 + rnd() * 0.13);
+            bx(g, tw, th, 0.14 + rnd() * 0.06, BOOK_MATS[Math.floor(rnd() * BOOK_MATS.length)], x + tw / 2, y0, -0.02 + rnd() * 0.02, { cast: false }); x += tw + 0.002; }
+          if (rnd() < 0.3) bx(g, 0.12, 0.1 + rnd() * 0.08, 0.12, BOOK_MATS[Math.floor(rnd() * BOOK_MATS.length)], x0 + bw - t - 0.12, y0, 0, { cast: false });   // 오브제
+        }
+      }
+    } },
+  roundtable: { label: '원탁', parts: { top: 'wood.desk', leg: 'chair' }, def: { w: 0.8, d: 0.8, h: 0.45 },
+    build(g, it, M) {
+      cyl(g, it.w / 2, 0.03, M('top'), 0, it.h - 0.03, 0, { seg: 40 });
+      cyl(g, 0.05, it.h - 0.05, M('leg'), 0, 0.02, 0);
+      cyl(g, it.w * 0.28, 0.02, M('leg'), 0, 0, 0, { seg: 40 });
+    } },
+  daybed: { label: '데이베드', parts: { frame: 'bed.frame', linen: 'bed.linen' }, def: { w: 2.0, d: 0.9, h: 0.42 },
+    build(g, it, M) {
+      const { w, d, h } = it;
+      bx(g, w, 0.1, d, M('frame'), 0, h - 0.24, 0);
+      for (const [x, z] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) bx(g, 0.05, h - 0.24, 0.05, M('frame'), x * (w / 2 - 0.06), 0, z * (d / 2 - 0.06));
+      bx(g, w - 0.04, 0.12, d - 0.04, M('linen'), 0, h - 0.14, 0);
+      for (const x of [-w / 2 + 0.35, w / 2 - 0.35]) { const b = cyl(g, 0.11, 0.5, M('linen'), x, h - 0.02, -d / 2 + 0.15); b.rotation.z = Math.PI / 2; b.position.y = h + 0.02; }
+    } },
   box: { label: '박스(치수 입력)', parts: { body: 'wardrobe' }, def: { w: 0.6, d: 0.6, h: 0.6 },
     build(g, it, M) { bx(g, it.w, it.h, it.d, M('body'), 0, 0, 0); } },
 };
@@ -474,7 +513,7 @@ Object.assign(BUILDERS, LIGHT_BUILDERS);
 export const CATALOG_LIGHTS = Object.keys(LIGHT_BUILDERS);
 
 // 카탈로그에 노출할 타입 순서
-export const CATALOG = ['bed', 'bed1', 'sofa', 'armchair', 'ottoman', 'table', 'chair', 'desk', 'wardrobe', 'drawers', 'bookshelf', 'lowcab', 'tallcab', 'tvstand', 'fridge', 'kcounter', 'kupper', 'plant', 'rug', 'lamp', 'box'];
+export const CATALOG = ['bed', 'bed1', 'daybed', 'sofa', 'armchair', 'ottoman', 'table', 'roundtable', 'chair', 'desk', 'wardrobe', 'drawers', 'bookshelf', 'shelfwall', 'lowcab', 'tallcab', 'tvstand', 'fridge', 'kcounter', 'kupper', 'plant', 'rug', 'lamp', 'box'];
 
 // 아이템 → Group. 색 오버라이드는 it.colors[part] = '#hex'
 export function buildItem(it) {
