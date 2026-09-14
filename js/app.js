@@ -173,8 +173,8 @@ const WALK_KEYS = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown
 const keyTime = new Map();                 // code → performance.now()
 const keys = { has: (c) => keyTime.has(c), get size() { return keyTime.size; } };
 function pruneKeys() { const now = performance.now(); for (const [c, t] of keyTime) if (now - t > 1100) keyTime.delete(c); }   // 윈도우 반복 지연 최대 1초
-// 걷기 시작: 현관문 밖 1.3 m 지점에서 문(북쪽)을 바라보며 들어간다
-const WALK_START = { pos: [5850, 10300], look: [5850, 8000] };
+// 걷기 시작: 현관문 밖 2.5 m 지점에서 문(북쪽)을 바라보며 들어간다 — 현관 센서등(z 8,300)까지 3.2 m 라 꺼진 상태로 시작
+const WALK_START = { pos: [5850, 11500], look: [5850, 8000] };
 $('#btn-walk').onclick = () => {
   camera.position.set(mx(WALK_START.pos[0]), 1.5, mz(WALK_START.pos[1]));
   camera.lookAt(mx(WALK_START.look[0]), 1.3, mz(WALK_START.look[1]));
