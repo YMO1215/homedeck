@@ -12,7 +12,7 @@ const SAVE_KEY = 'homedeck.v1';
 const $ = (s) => document.querySelector(s);
 
 // ── 상태 ───────────────────────────────────────────────────────
-const state = { items: [], exposure: 1.0, sun: 1.0, lamp: 1.0, scheme: 'base', night: false };
+const state = { items: [], exposure: 1.0, sun: 0.7, lamp: 1.0, scheme: 'base', night: false };
 const objs = new Map();          // itemId → Group
 
 function loadState() {
@@ -26,7 +26,7 @@ function applySaved(s) {
   // 평면 좌표계가 바뀐 저장본이면 가구 배치는 기본값으로, 색·마감만 이어받는다
   state.items = s.plan === PLAN_VERSION ? s.items : JSON.parse(JSON.stringify(DEFAULT_ITEMS));
   if (s.plan !== PLAN_VERSION) setTimeout(() => flash('평면·조명 구성이 바뀌어 배치를 기본값으로 되돌렸습니다(색은 유지)'), 800);
-  state.exposure = s.exposure ?? 1.0; state.sun = s.sun ?? 1.0; state.lamp = Math.min(1, s.lamp ?? 1.0); state.scheme = s.scheme || 'base'; state.night = !!s.night;
+  state.exposure = s.exposure ?? 1.0; state.sun = Math.min(1, s.sun ?? 0.7); state.lamp = Math.min(1, s.lamp ?? 1.0); state.scheme = s.scheme || 'base'; state.night = !!s.night;
   for (const it of s.items || []) if (it.pw > 1) it.pw = 1;   // 조광은 정격(100%)을 넘지 않는다 — 옛 저장본 보정
   // pv 2 부터는 기본값과 다른 페인트만 저장 → 코드의 새 기본 색이 옛 저장본에 덮이지 않는다.
   // 옛 형식(pv 없음)은 모든 키에 당시 기본값이 들어 있어 구분이 안 되므로 색을 이어받지 않는다.
@@ -72,9 +72,12 @@ orbit.enableDamping = true; orbit.dampingFactor = 0.08; orbit.maxPolarAngle = Ma
 orbit.target.set(CENTER.x, 1.0, CENTER.z);
 const walk = new PointerLockControls(camera, document.body);
 
+// 햇빛: 슬라이더 최대(1.0) = 한국 남향 아파트 한낮. 거실 큰 창(모델의 x=0 쪽)이 남향이라고 보고 그쪽에서 고도 39° 로 들어온다
+// (서울 위도 37.5°의 계절 평균 정오 고도 ≈ 30~76°, 봄·가을 기준). 태양 세기·하늘광·환경광이 함께 슬라이더를 따른다.
+const SUN_MAX = 6.0, HEMI_MIN = 0.12, HEMI_MAX = 0.75, ENV_MIN = 0.25, ENV_MAX = 1.0;
 const hemi = new THREE.HemisphereLight('#e8eef5', '#6b675f', 0.55); scene.add(hemi);
 const sun = new THREE.DirectionalLight('#fff3e0', 2.2);
-sun.position.set(CENTER.x - 14, 12, CENTER.z + 9); sun.target.position.set(CENTER.x, 0, CENTER.z);
+sun.position.set(CENTER.x - 16, 13.4, CENTER.z + 3); sun.target.position.set(CENTER.x, 0, CENTER.z);
 sun.castShadow = true; sun.shadow.mapSize.set(1024, 1024);
 Object.assign(sun.shadow.camera, { left: -9, right: 9, top: 9, bottom: -9, near: 1, far: 50 });
 sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.02;
@@ -124,9 +127,10 @@ mountAll();
 const DAY_BG = new THREE.Color('#cfd8e3'), NIGHT_BG = new THREE.Color('#0a0d12');
 function applyDayNight() {
   const n = state.night;
-  sun.intensity = n ? 0 : 2.2 * state.sun;
-  hemi.intensity = n ? 0.015 : 0.55;
-  scene.environmentIntensity = n ? 0.02 : 1;
+  const s = Math.min(1, Math.max(0, state.sun));
+  sun.intensity = n ? 0 : SUN_MAX * s;
+  hemi.intensity = n ? 0.015 : HEMI_MIN + (HEMI_MAX - HEMI_MIN) * s;
+  scene.environmentIntensity = n ? 0.02 : ENV_MIN + (ENV_MAX - ENV_MIN) * s;
   scene.background = n ? NIGHT_BG : DAY_BG;
   $('#sunlight').disabled = n;
   $('#btn-night').textContent = n ? '☀ 낮' : '🌙 밤';
@@ -472,8 +476,8 @@ $('#btn-reset').onclick = () => {
   if (!confirm('배치·색·밝기를 모두 원본 구조로 되돌릴까요? (현재 수정 내용은 사라집니다 — 남기려면 먼저 내보내기)')) return;
   localStorage.removeItem(SAVE_KEY);
   for (const k of Object.keys(PAINTS)) updatePaint(k, { ...DEFAULT_PAINTS[k] });
-  state.items = JSON.parse(JSON.stringify(DEFAULT_ITEMS)); state.exposure = 1; state.sun = 1; state.lamp = 1;
-  state.night = false; renderer.toneMappingExposure = 1; applyDayNight(); $('#exposure').value = 1; $('#sunlight').value = 1; $('#lamp').value = 1;
+  state.items = JSON.parse(JSON.stringify(DEFAULT_ITEMS)); state.exposure = 1; state.sun = 0.7; state.lamp = 1;
+  state.night = false; state.sun = 0.7; renderer.toneMappingExposure = 1; applyDayNight(); $('#exposure').value = 1; $('#sunlight').value = 0.7; $('#lamp').value = 1;
   state.scheme = 'base'; markScheme();
   mountAll(); deselect(); document.querySelectorAll('.prow').forEach(r => syncPaintRows(r.dataset.key)); flash('원본 구조로 되돌렸습니다');
 };
