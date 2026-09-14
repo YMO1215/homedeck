@@ -124,17 +124,27 @@ for (const v of VIEWS) { const o = document.createElement('option'); o.value = v
 viewSel.onchange = () => setView(VIEWS.find(v => v.id === viewSel.value));
 { const top = VIEWS.find(v => v.id === 'top') || VIEWS[0]; setView(top); viewSel.value = top.id; }   // 시작은 탑뷰
 
-// 걷기 모드
-const keys = new Set();
+// 걷기 모드 — 눌린 키는 "마지막 keydown 시각" 으로 관리한다. 한글 IME 상태에서는 keyup 이 씹혀 키가 눌린 채로
+// 남는 일이 있어(→ 혼자 계속 움직임), OS 자동 반복이 끊긴 지 1.1 초가 지나면 뗀 것으로 본다.
+const WALK_KEYS = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ShiftLeft', 'ShiftRight']);
+const keyTime = new Map();                 // code → performance.now()
+const keys = { has: (c) => keyTime.has(c), get size() { return keyTime.size; } };
+function pruneKeys() { const now = performance.now(); for (const [c, t] of keyTime) if (now - t > 1100) keyTime.delete(c); }   // 윈도우 반복 지연 최대 1초
 $('#btn-walk').onclick = () => { walk.lock(); };
-walk.addEventListener('lock', () => { document.body.classList.add('walking'); orbit.enabled = false; });
+walk.addEventListener('lock', () => { document.body.classList.add('walking'); orbit.enabled = false; keyTime.clear(); });
 walk.addEventListener('unlock', () => {
-  document.body.classList.remove('walking'); orbit.enabled = true;
+  document.body.classList.remove('walking'); orbit.enabled = true; keyTime.clear();
   const dir = new THREE.Vector3(); camera.getWorldDirection(dir);
   orbit.target.copy(camera.position).addScaledVector(dir, 3); orbit.update();
 });
-addEventListener('keydown', e => { keys.add(e.code); });
-addEventListener('keyup', e => keys.delete(e.code));
+addEventListener('keydown', e => {
+  if (!WALK_KEYS.has(e.code)) return;
+  if (walk.isLocked) e.preventDefault();   // IME 조합·페이지 스크롤로 새지 않게
+  keyTime.set(e.code, performance.now());
+});
+addEventListener('keyup', e => { keyTime.delete(e.code); if (e.key === 'Process') keyTime.clear(); });
+addEventListener('blur', () => keyTime.clear());
+document.addEventListener('visibilitychange', () => keyTime.clear());
 
 // ── 선택 · 드래그 · 페인트 ────────────────────────────────────
 const ray = new THREE.Raycaster(), ptr = new THREE.Vector2();
@@ -470,7 +480,8 @@ function tick() {
   resize();
   let moving = false;
   if (walk.isLocked) {
-    const sp = (keys.has('ShiftLeft') ? 3.2 : 1.6) * dt;
+    pruneKeys();
+    const sp = (keys.has('ShiftLeft') || keys.has('ShiftRight') ? 3.2 : 1.6) * dt;
     if (keys.has('KeyW') || keys.has('ArrowUp')) walk.moveForward(sp);
     if (keys.has('KeyS') || keys.has('ArrowDown')) walk.moveForward(-sp);
     if (keys.has('KeyA') || keys.has('ArrowLeft')) walk.moveRight(-sp);
