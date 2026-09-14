@@ -6,7 +6,7 @@ import { H, S, mx, mz, CENTER, BOUNDS, VIEWS, DEFAULT_ITEMS, PLAN_VERSION, WALLS
 import { PAINTS, DEFAULT_PAINTS, updatePaint, getMaterial, OPTICS } from './materials.js';
 import { FINISHES } from './textures.js';
 import { SCHEMES } from './schemes.js';
-import { buildWalls, buildFloors, buildDoors, buildFixtures, buildItem, BUILDERS, CATALOG, CATALOG_LIGHTS, KELVIN_OPTIONS, wattOf, SHADOW_BUDGET } from './builders.js';
+import { buildWalls, buildFloors, buildDoors, buildFixtures, buildItem, BUILDERS, CATALOG, CATALOG_LIGHTS, KELVIN_OPTIONS, wattOf, lmOf, SHADOW_BUDGET } from './builders.js';
 
 const SAVE_KEY = 'homedeck.v1';
 const $ = (s) => document.querySelector(s);
@@ -310,7 +310,7 @@ function showItemPanel(it) {
   }
   const L = $('#ip-light'); L.hidden = !B.light;
   if (B.light) { $('#ip-lit').checked = it.lit !== false; $('#ip-pw').value = it.pw ?? 1; $('#ip-kelvin').value = String(it.kelvin || 3000); $('#ip-watt').value = wattOf(B, it); }
-  $('#ip-dims').textContent = B.light ? `${wattOf(B, it)} W ≈ ${wattOf(B, it) * 100} lm · ` + (it.type === 'downlight' ? '폭 = 트림 지름' : '높이 = 천장에서 내려오는 길이') : B.ceiling ? '천장 부착 — 폭·깊이로 패널 크기 조절' : '';
+  $('#ip-dims').textContent = B.light ? `${wattOf(B, it)} W ≈ ${Math.round(lmOf(B, it))} lm · ` + (it.type === 'downlight' ? '폭 = 트림 지름' : '높이 = 천장에서 내려오는 길이') : B.ceiling ? '천장 부착 — 폭·깊이로 패널 크기 조절' : '';
   fillItemFields(it);
 }
 $('#ip-lit').onchange = (e) => { const it = selected?.item; if (!it) return; it.lit = e.target.checked; rebuildItem(it); };
