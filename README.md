@@ -3,9 +3,9 @@
 인테리어 업체가 준 SketchUp 렌더(탑뷰 평면도 + 실내 12컷)를 바탕으로 집 전체를 Three.js 로 다시 세운 페이지.
 브라우저에서 **색·마감을 칠하고 가구를 끌어서 배치**할 수 있다. 설치·빌드 없음 — 정적 파일 그대로 동작.
 
-- 실행: <https://ymo1215.github.io/homedeck/> (GitHub Pages) — 또는 `index.html` 을 아무 정적 서버로 열기
-- 로컬: `python -m http.server 8123` 후 `http://127.0.0.1:8123/`
-  (`file://` 로는 ES 모듈이 막히므로 서버가 필요)
+- 실행(로컬): 이 폴더에서 `python -m http.server 8123` → <http://127.0.0.1:8123/>
+  (`file://` 로는 ES 모듈이 막히므로 정적 서버가 필요. Three.js 는 CDN 이라 인터넷은 필요)
+- 저장소는 private 로 유지 — GitHub Pages 는 공개 전환 후 `.github/workflows/pages.yml` 을 수동 실행하면 켜진다
 
 ## 할 수 있는 것
 

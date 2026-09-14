@@ -1,8 +1,7 @@
 name: Deploy to GitHub Pages
 
+# 저장소가 private(무료 플랜)이라 Pages 를 못 쓴다 — 공개 전환 뒤 수동 실행용으로만 남겨 둔다.
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 permissions:
