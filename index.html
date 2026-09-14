@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HomeDeck — 우리집 3D 인테리어</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="css/style.css">
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<header id="bar">
+  <strong>HomeDeck</strong>
+  <label>시점 <select id="view"></select></label>
+  <button id="btn-walk" title="마우스로 둘러보고 WASD 로 걷기 · Esc 로 나가기">🚶 걷기</button>
+  <label title="화면 밝기">밝기 <input id="exposure" type="range" min="0.4" max="2" step="0.05" value="1"></label>
+  <label title="창으로 들어오는 햇빛">햇빛 <input id="sunlight" type="range" min="0" max="2" step="0.1" value="1"></label>
+  <span class="sp"></span>
+  <button id="btn-shot" title="현재 화면 PNG 저장">📷</button>
+  <button id="btn-export" title="배치·색 JSON 내보내기">내보내기</button>
+  <label class="btn" title="JSON 불러오기">불러오기<input id="file-import" type="file" accept="application/json" hidden></label>
+  <button id="btn-reset">초기화</button>
+  <button id="btn-panel" title="패널 접기/펴기">☰</button>
+</header>
+
+<aside id="panel">
+  <nav>
+    <button class="tab on" data-pane="paint">🎨 색·마감</button>
+    <button class="tab" data-pane="furn">🛋 가구</button>
+    <button class="tab" data-pane="help">? 도움말</button>
+  </nav>
+
+  <section id="pane-paint" class="pane">
+    <p class="hint">화면에서 <b>벽·바닥·천장·가구 면을 클릭</b>하면 그 면만 바로 고칠 수 있습니다. 아래는 전체 목록입니다.</p>
+    <div id="swatches" class="swatches"></div>
+    <div id="paint-list"></div>
+  </section>
+
+  <section id="pane-furn" class="pane" hidden>
+    <p class="hint">가구를 누르면 화면 가운데 바닥에 놓입니다. <b>드래그</b>로 옮기고 <b>Q/E</b>(15°)·<b>R</b>(90°)로 돌리고 <b>Delete</b>로 지웁니다.</p>
+    <div id="catalog" class="catalog"></div>
+    <div class="row2">
+      <button id="btn-unlock-all">기본 가구 잠금 해제</button>
+      <button id="btn-lock-all">기본 가구 잠금</button>
+    </div>
+  </section>
+
+  <section id="pane-help" class="pane" hidden>
+    <h4>보기</h4>
+    <ul>
+      <li>마우스 왼쪽 드래그: 회전 · 오른쪽 드래그: 이동 · 휠: 확대</li>
+      <li>상단 <b>시점</b>에서 원본 렌더와 같은 구도로 이동</li>
+      <li><b>걷기</b>: 마우스로 둘러보고 W A S D 이동, Shift 달리기, Esc 종료</li>
+    </ul>
+    <h4>색·마감</h4>
+    <ul>
+      <li>면을 클릭 → 색상 선택기와 마감(타일·원목·벽지·대리석…) 변경</li>
+      <li>같은 종류의 면(예: 벽 전체)은 함께 바뀝니다. 가구는 개별 색 지정 가능</li>
+    </ul>
+    <h4>가구</h4>
+    <ul>
+      <li>기본 배치 가구는 잠겨 있습니다. 선택 후 <b>잠금</b>을 풀면 옮길 수 있습니다</li>
+      <li>치수(폭·깊이·높이)는 선택 패널에서 m 단위로 직접 입력</li>
+    </ul>
+    <h4>저장</h4>
+    <ul>
+      <li>변경은 이 브라우저에 자동 저장됩니다(localStorage)</li>
+      <li>다른 기기로 옮기려면 <b>내보내기</b> → <b>불러오기</b></li>
+    </ul>
+    <p class="hint">치수는 평면도 비율 추정(1px ≈ 14mm)입니다. 실측을 주면 <code>js/plan.js</code> 의 <code>S</code> 하나로 보정됩니다.</p>
+  </section>
+</aside>
+
+<div id="item-panel" class="float" hidden>
+  <div class="fh"><span id="ip-title"></span><button id="ip-close" class="mini">✕</button></div>
+  <label class="row"><span>잠금</span><input id="ip-lock" type="checkbox"></label>
+  <div class="grid">
+    <label>X(m)<input id="ip-x" type="number" step="0.05"></label>
+    <label>Z(m)<input id="ip-z" type="number" step="0.05"></label>
+    <label>각도<input id="ip-rot" type="number" step="15"></label>
+    <label>폭<input id="ip-w" type="number" step="0.05" min="0.05"></label>
+    <label>깊이<input id="ip-d" type="number" step="0.05" min="0.05"></label>
+    <label>높이<input id="ip-h" type="number" step="0.05" min="0.05"></label>
+  </div>
+  <div class="row2">
+    <button id="ip-rotl">↶ 15°</button><button id="ip-rotr">↷ 15°</button><button id="ip-rot90">90°</button>
+    <button id="ip-dup">복제</button><button id="ip-del" class="danger">삭제</button>
+  </div>
+  <div id="ip-parts"></div>
+</div>
+
+<div id="paint-panel" class="float" hidden>
+  <div class="fh"><span>면 색·마감</span><button id="pp-close" class="mini">✕</button></div>
+  <div id="pp-row"></div>
+</div>
+
+<div id="toast"></div>
+<div id="crosshair">+</div>
+
+<script type="module" src="js/app.js"></script>
+</body>
+</html>
