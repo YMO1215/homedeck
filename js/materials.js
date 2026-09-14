@@ -6,8 +6,8 @@ import { texture, baseTexture, FINISHES } from './textures.js';
 export const PAINTS = {
   'wall':           { label: '벽',              group: '건축', color: '#f1efe9', finish: 'wallpaper' },
   'wall.bath':      { label: '욕실 벽 타일',    group: '건축', color: '#e6e1d6', finish: 'tile', sizeY: 0.6 },   // 600×600 대형 타일
-  'ceiling':        { label: '천장',            group: '건축', color: '#dedede', finish: 'plain' },
-  'ceiling.bath':   { label: '욕실 천장',       group: '건축', color: '#4a4a4c', finish: 'plain', rough: 0.6 },   // 다크 그레이 천장
+  'ceiling':        { label: '천장',            group: '건축', color: '#f4f4f2', finish: 'plain', rough: 0.85 },   // 모든 디자인에서 백색 천장
+  'ceiling.bath':   { label: '욕실 천장',       group: '건축', color: '#f4f4f2', finish: 'plain', rough: 0.7 },   // 백색
   'floor.main':     { label: '거실·주방 바닥',  group: '바닥', color: '#4d4d4f', finish: 'tile' },
   'floor.bedroom':  { label: '안방 바닥',       group: '바닥', color: '#4d4d4f', finish: 'tile' },
   'floor.small':    { label: '작은방 바닥',     group: '바닥', color: '#55555a', finish: 'tile' },

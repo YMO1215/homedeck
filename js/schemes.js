@@ -5,6 +5,8 @@
 //   웨스트코스트 오가닉 — Benjamin Moore Swiss Coffee / White Dove(Studio McGee), 와이드 화이트오크, 트래버틴, 소프트 블랙
 // 원칙: 채도 낮은 뉴트럴 3~4톤 + 포인트 1톤. 나무는 노랗지 않게(그레이지 쪽), 검정은 순검정 대신 #26~#2b.
 // 공통: 스킴이 바꾸지 않는 키는 기본값으로 돌아간다(app.js applyScheme). 도기·가전·스테인리스는 스킴마다 같다.
+// 천장은 모든 디자인에서 백색(사용자 규칙)
+const CEIL = { color: '#f4f4f2', finish: 'plain', rough: 0.85 }, CEIL_BATH = { color: '#f4f4f2', finish: 'plain', rough: 0.7 };
 const SANITARY = { 'sanitary': { color: '#fbfbfa', finish: 'gloss' }, 'washer': { color: '#f0f0ee', finish: 'gloss', rough: 0.3 }, 'fridge': { color: '#ececea', finish: 'gloss', rough: 0.3 } };
 
 export const SCHEMES = [
@@ -22,11 +24,11 @@ export const SCHEMES = [
     palette: ['#f4f1ea', '#d9cbb3', '#ebe8e2', '#262626', '#cfc8bb'],
     kelvin: 2700,
     paints: {
-      'wall': { color: '#f4f1ea', finish: 'wallpaper' }, 'ceiling': { color: '#f6f4ef', finish: 'plain' },
+      'wall': { color: '#f4f1ea', finish: 'wallpaper' }, 'ceiling': CEIL,
       'floor.main': { color: '#d9cbb3', finish: 'wood' }, 'floor.bedroom': { color: '#d9cbb3', finish: 'wood' },
       'floor.small': { color: '#d9cbb3', finish: 'wood' }, 'floor.study': { color: '#d9cbb3', finish: 'wood' },
       'floor.foyer': { color: '#8e8b86', finish: 'tile30' }, 'floor.balcony': { color: '#b5b2ac', finish: 'tile30' },
-      'floor.bath': { color: '#b9b6b0', finish: 'tile30' }, 'wall.bath': { color: '#dedbd5', finish: 'tile' }, 'ceiling.bath': { color: '#e9e7e2', finish: 'plain' },
+      'floor.bath': { color: '#b9b6b0', finish: 'tile30' }, 'wall.bath': { color: '#dedbd5', finish: 'tile' }, 'ceiling.bath': CEIL_BATH,
       'kitchen.door': { color: '#ebe8e2', finish: 'matte' }, 'kitchen.upper': { color: '#ebe8e2', finish: 'matte' }, 'kitchen.top': { color: '#e9e6df', finish: 'satin' },   // 무광 도장 + 쿼츠 반광
       'appliance': { color: '#262626', finish: 'satin' }, 'steel': { color: '#c3c5c7', finish: 'brushed' },
       'wardrobe': { color: '#efece6', finish: 'plain', rough: 0.55 }, 'bed.frame': { color: '#c9b899', finish: 'wood' }, 'bed.linen': { color: '#f0ece5', finish: 'fabric' },
@@ -48,11 +50,11 @@ export const SCHEMES = [
     palette: ['#dfd9d0', '#b7b1a9', '#6a6560', '#6b5142', '#1f1f1f'],
     kelvin: 3000,
     paints: {
-      'wall': { color: '#dfd9d0', finish: 'plain', rough: 0.9 }, 'ceiling': { color: '#e8e4dd', finish: 'plain' },
+      'wall': { color: '#dfd9d0', finish: 'plain', rough: 0.9 }, 'ceiling': CEIL,
       'floor.main': { color: '#b7b1a9', finish: 'tile' }, 'floor.bedroom': { color: '#b7b1a9', finish: 'tile' },
       'floor.small': { color: '#b7b1a9', finish: 'tile' }, 'floor.study': { color: '#b7b1a9', finish: 'tile' },
       'floor.foyer': { color: '#6f6a64', finish: 'tile30' }, 'floor.balcony': { color: '#a39e97', finish: 'tile30' },
-      'floor.bath': { color: '#a5a09a', finish: 'tile30' }, 'wall.bath': { color: '#d4cec5', finish: 'tile' }, 'ceiling.bath': { color: '#4a4744', finish: 'plain', rough: 0.6 },
+      'floor.bath': { color: '#a5a09a', finish: 'tile30' }, 'wall.bath': { color: '#d4cec5', finish: 'tile' }, 'ceiling.bath': CEIL_BATH,
       'kitchen.door': { color: '#6a6560', finish: 'satin' }, 'kitchen.upper': { color: '#e4dfd8', finish: 'satin' }, 'kitchen.top': { color: '#3a3734', finish: 'satin' },   // 반광 PET 도어 + 무광 세라믹 상판
       'appliance': { color: '#1f1f1f', finish: 'gloss' }, 'steel': { color: '#b4b6b8', finish: 'brushed' },
       'wardrobe': { color: '#e4dfd8', finish: 'plain', rough: 0.5 }, 'bed.frame': { color: '#6b5142', finish: 'wood' }, 'bed.linen': { color: '#e3ddd3', finish: 'fabric' },
@@ -74,11 +76,11 @@ export const SCHEMES = [
     palette: ['#efeae0', '#c8b59c', '#e1d8c9', '#2b2a28', '#b9a888'],
     kelvin: 3000,
     paints: {
-      'wall': { color: '#efeae0', finish: 'plain', rough: 0.9 }, 'ceiling': { color: '#f0eee6', finish: 'plain' },
+      'wall': { color: '#efeae0', finish: 'plain', rough: 0.9 }, 'ceiling': CEIL,
       'floor.main': { color: '#c8b59c', finish: 'wood' }, 'floor.bedroom': { color: '#c8b59c', finish: 'wood' },
       'floor.small': { color: '#c8b59c', finish: 'wood' }, 'floor.study': { color: '#c8b59c', finish: 'wood' },
       'floor.foyer': { color: '#8a837a', finish: 'tile30' }, 'floor.balcony': { color: '#b3ada3', finish: 'tile30' },
-      'floor.bath': { color: '#c2b9ab', finish: 'tile30' }, 'wall.bath': { color: '#ddd5c8', finish: 'tile' }, 'ceiling.bath': { color: '#e9e4da', finish: 'plain' },
+      'floor.bath': { color: '#c2b9ab', finish: 'tile30' }, 'wall.bath': { color: '#ddd5c8', finish: 'tile' }, 'ceiling.bath': CEIL_BATH,
       'kitchen.door': { color: '#e6e0d5', finish: 'matte' }, 'kitchen.upper': { color: '#e6e0d5', finish: 'matte' }, 'kitchen.top': { color: '#e1d8c9', finish: 'stone' },   // 무광 도장 + 혼드 트래버틴
       'appliance': { color: '#2b2a28', finish: 'satin' }, 'steel': { color: '#b08d57', finish: 'brushed' },
       'wardrobe': { color: '#e9e3d9', finish: 'plain', rough: 0.55 }, 'bed.frame': { color: '#8f7a60', finish: 'wood' }, 'bed.linen': { color: '#efe9de', finish: 'fabric' },
@@ -199,10 +201,10 @@ function P(s) {
   const floorMain = fin(s.floor, 'tile'), fb = fin(s.floorBed ?? s.floor, 'tile'), fs = fin(s.floorSmall ?? s.floor, 'tile'), fst = fin(s.floorStudy ?? s.floor, 'tile');
   const cab = fin(s.cab, 'plain', { rough: 0.5 });
   return {
-    'wall': fin(s.wall, 'plain', { rough: 0.9 }), 'ceiling': { color: s.ceiling, finish: 'plain' },
+    'wall': fin(s.wall, 'plain', { rough: 0.9 }), 'ceiling': CEIL,                     // 천장은 모든 디자인에서 백색
     'floor.main': floorMain, 'floor.bedroom': fb, 'floor.small': fs, 'floor.study': fst,
     'floor.foyer': { color: s.foyer, finish: 'tile30' }, 'floor.balcony': { color: s.balcony, finish: 'tile30' },
-    'floor.bath': { color: s.bathF, finish: 'tile30' }, 'wall.bath': { color: s.bathW, finish: 'tile' }, 'ceiling.bath': { color: s.bathC, finish: 'plain', rough: 0.6 },
+    'floor.bath': { color: s.bathF, finish: 'tile30' }, 'wall.bath': { color: s.bathW, finish: 'tile' }, 'ceiling.bath': CEIL_BATH,
     'kitchen.door': fin(s.kDoor, 'plain', { rough: 0.5 }), 'kitchen.upper': fin(s.kUpper, 'plain', { rough: 0.5 }), 'kitchen.top': fin(s.kTop, 'plain', { rough: 0.3 }),
     'appliance': { color: s.black, finish: 'gloss' }, 'steel': { color: s.metal, finish: 'brushed' },
     'wardrobe': cab, 'study.cabinet': cab, 'door': cab, 'tvwall': cab, 'shelf': cab, 'shoe': cab,
