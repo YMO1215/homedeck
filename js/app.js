@@ -54,9 +54,9 @@ function flash(msg) {
 
 // ── 씬 ─────────────────────────────────────────────────────────
 const canvas = $('#c');
-// 부하 절감: 픽셀비 1.5 상한 · 가벼운 PCF 그림자(1024) · 외부 지형/건물 없음 · 화면이 바뀔 때만 렌더(아래 dirty)
+// 부하 절감: 픽셀비 1 고정 · 가벼운 PCF 그림자(1024) · 외부 지형/건물 없음 · 화면이 바뀔 때만 렌더(아래 dirty)
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
-renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
+renderer.setPixelRatio(1);   // 픽셀비 1 고정(부하 절감) — 고DPI 모니터에서는 약간 부드럽게 보임
 renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFShadowMap;
 renderer.shadowMap.autoUpdate = false;   // 그림자 깊이맵은 씬(가구·조명)이 바뀔 때만 다시 그린다 — 카메라 이동은 공짜
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
