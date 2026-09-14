@@ -627,7 +627,7 @@ const LIGHT_BUILDERS = {
     build(g, it, M) {
       const r = it.w / 2, ra = r * 0.83;    // 외경 Ø180, 개구 ≈ Ø150
       cyl(g, r, 0.008, M('trim'), 0, H - 0.008, 0, { seg: 48 });                              // 흰 트림(8 mm 돌출)
-      const disc = new THREE.Mesh(new THREE.CylinderGeometry(ra, ra, 0.003, 48), glowMat(it, 0.6)); disc.position.y = H - 0.0095; g.add(disc);   // 유백 확산판
+      const disc = new THREE.Mesh(new THREE.CylinderGeometry(ra, ra, 0.003, 48), glowMat(it, 0.6)); disc.position.y = H - 0.0095; disc.userData.glow = true; g.add(disc);   // 유백 확산판(센서 on/off 시 발광 토글)
       const dome = new THREE.Mesh(new THREE.SphereGeometry(0.011, 16, 12, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), M('sensor')); dome.position.y = H - 0.011; g.add(dome);   // PIR 센서 돔(반구)
       addSpot(g, it, 0, H - 0.02, 0, THREE.MathUtils.degToRad(60), lmOf(LIGHT_BUILDERS.sensorlight, it), 1, 0, 0, 0, 4, 1);   // 120° 확산, 도달 4 m
     } },

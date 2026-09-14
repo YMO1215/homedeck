@@ -40,7 +40,8 @@ function serialize() {
     const p = PAINTS[k], d = DEFAULT_PAINTS[k];
     if (PAINT_FIELDS.some(f => (p[f] ?? null) !== (d[f] ?? null))) { paints[k] = {}; for (const f of PAINT_FIELDS) paints[k][f] = p[f] ?? null; }   // 비운 값은 null 로(JSON 유지)
   }
-  return { v: 1, pv: 2, plan: PLAN_VERSION, items: state.items, paints, exposure: state.exposure, sun: state.sun, lamp: state.lamp, scheme: state.scheme, night: state.night, savedAt: new Date().toISOString() };
+  const items = state.items.map(it => Object.fromEntries(Object.entries(it).filter(([k]) => !k.startsWith('_'))));   // _센서 상태 같은 임시 필드는 저장 안 함
+  return { v: 1, pv: 2, plan: PLAN_VERSION, items, paints, exposure: state.exposure, sun: state.sun, lamp: state.lamp, scheme: state.scheme, night: state.night, savedAt: new Date().toISOString() };
 }
 let saveTimer = 0;
 function save() {
@@ -107,8 +108,23 @@ function enforceShadowBudget() {
 }
 // 조명 아이템: 광원 세기 = 기준(base) × 켜짐 × 아이템 배율(pw) × 전역 슬라이더
 function applyLamp(g, it) {
-  const f = (it.lit === false ? 0 : (it.pw ?? 1)) * state.lamp;
-  g.traverse(o => { if (o.isLight) o.intensity = (o.userData.base || 0) * f; });
+  const sensor = it.type === 'sensorlight' && walk.isLocked ? (it._sensorOn ? 1 : 0) : 1;   // 센서등: 걷기 모드에서만 감지 상태를 따른다
+  const f = (it.lit === false ? 0 : (it.pw ?? 1)) * state.lamp * sensor;
+  g.traverse(o => {
+    if (o.isLight) o.intensity = (o.userData.base || 0) * f;
+    if (o.userData.glow) { if (o.userData.glowBase == null) o.userData.glowBase = o.material.emissiveIntensity; o.material.emissiveIntensity = f > 0 ? o.userData.glowBase : 0; }
+  });
+}
+// 센서등 감지: 걷는 사람이 수평 2.5 m 안에 들어오면 켜지고, 벗어나면 3 초 뒤에 꺼진다
+const SENSOR_RANGE = 2.5, SENSOR_HOLD = 3;
+function updateSensors(dt) {
+  for (const it of state.items) {
+    if (it.type !== 'sensorlight') continue;
+    const near = Math.hypot(camera.position.x - it.x, camera.position.z - it.z) < SENSOR_RANGE;
+    it._sensorT = near ? SENSOR_HOLD : Math.max(0, (it._sensorT ?? 0) - dt);
+    const on = it._sensorT > 0;
+    if (on !== !!it._sensorOn) { it._sensorOn = on; const g = objs.get(it.id); if (g) applyLamp(g, it); invalidate(); }
+  }
 }
 function applyLampAll() { for (const g of objs.values()) applyLamp(g, g.userData.item); }
 function unmountItem(id) {
@@ -158,9 +174,9 @@ const keyTime = new Map();                 // code → performance.now()
 const keys = { has: (c) => keyTime.has(c), get size() { return keyTime.size; } };
 function pruneKeys() { const now = performance.now(); for (const [c, t] of keyTime) if (now - t > 1100) keyTime.delete(c); }   // 윈도우 반복 지연 최대 1초
 $('#btn-walk').onclick = () => { walk.lock(); };
-walk.addEventListener('lock', () => { document.body.classList.add('walking'); orbit.enabled = false; keyTime.clear(); });
+walk.addEventListener('lock', () => { document.body.classList.add('walking'); orbit.enabled = false; keyTime.clear(); for (const it of state.items) if (it.type === 'sensorlight') { it._sensorOn = false; it._sensorT = 0; } applyLampAll(); });
 walk.addEventListener('unlock', () => {
-  document.body.classList.remove('walking'); orbit.enabled = true; keyTime.clear();
+  document.body.classList.remove('walking'); orbit.enabled = true; keyTime.clear(); applyLampAll();   // 걷기 종료: 센서등은 다시 항상 켜짐
   const dir = new THREE.Vector3(); camera.getWorldDirection(dir);
   orbit.target.copy(camera.position).addScaledVector(dir, 3); orbit.update();
 });
@@ -515,6 +531,7 @@ function tick() {
     if (keys.has('KeyA') || keys.has('ArrowLeft')) walk.moveRight(-sp);
     if (keys.has('KeyD') || keys.has('ArrowRight')) walk.moveRight(sp);
     camera.position.y = 1.5;
+    updateSensors(dt);
     moving = keys.size > 0;
   } else moving = orbit.update();          // 감쇠 중이면 true
   if (moving || drag || dirty > 0) { renderer.render(scene, camera); if (dirty > 0) dirty--; }
